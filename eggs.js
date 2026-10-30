@@ -347,9 +347,39 @@
     run(line);
     termLog.scrollTop = termLog.scrollHeight;
   });
+  // Tab completes the word under the cursor: a command name first, a path after that.
+  // Several matches complete to their shared prefix, and list themselves when that adds nothing.
+  function complete() {
+    const value = termInput.value;
+    const words = value.split(' ');
+    const current = words.pop();
+    let base = '';
+    let options;
+    if (!words.length) {
+      options = Object.keys(COMMANDS).map((name) => `${name} `);
+    } else {
+      base = current.slice(0, current.lastIndexOf('/') + 1);
+      const folder = lookup(resolvePath(base || '.'));
+      if (!folder?.dir) return;
+      options = folder.entries.map((entry) => base + (entry.endsWith('/') ? entry : `${entry} `));
+    }
+    const matches = options.filter((option) => option.startsWith(current));
+    if (!matches.length) return;
+    let shared = matches[0];
+    for (const match of matches) while (!match.startsWith(shared)) shared = shared.slice(0, -1);
+    if (shared.length > current.length) {
+      termInput.value = [...words, shared].join(' ');
+    } else if (matches.length > 1) {
+      print(`${promptText()} ${value}`, 'in');
+      print(matches.map((match) => match.slice(base.length).trim()).join('  '));
+      termLog.scrollTop = termLog.scrollHeight;
+    }
+  }
+
   termInput.addEventListener('keydown', (e) => {
     if (e.key === 'ArrowUp' && historyPos > 0) termInput.value = history[--historyPos];
     else if (e.key === 'ArrowDown' && historyPos < history.length) termInput.value = history[++historyPos] ?? '';
+    else if (e.key === 'Tab' && !e.shiftKey) complete();
     else return;
     e.preventDefault();
   });
@@ -360,7 +390,7 @@
     if (term.open) return;
     if (!termLog.childElementCount) {
       print('TD-OS v1.0 · root access granted (not really)', 'dim');
-      print('Type help to list commands.', 'dim');
+      print('Type help to list commands. Tab completes.', 'dim');
     }
     term.showModal();
     termInput.focus();

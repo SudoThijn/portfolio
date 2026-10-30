@@ -677,13 +677,15 @@ html.js .panel-block:not(.in) .segs i.on { opacity: 0; transform: skewX(var(--sk
   width: 2px;
   background: linear-gradient(var(--yellow), var(--magenta) 50%, var(--line));
 }
-.quest {
-  position: relative;
+/* The list item carries the rail marker and never moves; only the inner card reacts to hover. */
+.quest { position: relative; }
+.quest__card {
   padding: 28px clamp(20px, 3vw, 36px) 30px;
   background: var(--panel);
+  clip-path: polygon(0 0, calc(100% - var(--cut)) 0, 100% var(--cut), 100% 100%, 0 100%);
   transition: background .25s, translate .25s var(--ease-out);
 }
-.quest:hover { background: var(--panel-2); translate: 6px 0; }
+.quest:hover .quest__card { background: var(--panel-2); translate: 6px 0; }
 .quest::before {
   content: "";
   position: absolute;
@@ -694,18 +696,6 @@ html.js .panel-block:not(.in) .segs i.on { opacity: 0; transform: skewX(var(--sk
   background: var(--ink);
   border: 2px solid var(--line-bright);
   rotate: 45deg;
-  transition: translate .25s var(--ease-out);
-}
-/* The card nudges right on hover; the marker moves back so it stays on the rail. */
-.quest:hover::before { translate: -6px 0; }
-/* Cut corner drawn as a triangle so the rail marker (::before) can hang outside the card. */
-.quest::after {
-  content: "";
-  position: absolute;
-  inset: 0 0 auto auto;
-  width: var(--cut);
-  height: var(--cut);
-  background: linear-gradient(to bottom left, var(--ink) 50%, transparent 50%);
 }
 .quest--active::before { border-color: var(--yellow); background: var(--yellow); box-shadow: 0 0 14px var(--yellow); }
 
