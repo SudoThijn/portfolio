@@ -56,6 +56,26 @@ body {
 
 [hidden] { display: none !important; }
 
+/* Interface chrome and click targets: repeated clicks (like five on the clock) shouldn't select text. */
+.hud,
+.btn,
+.block,
+.ticker,
+.hero__emblem,
+.hero__kana-inline,
+.sec-head__tag,
+.sec-head__kana,
+.stat,
+.idcard__strip,
+.toasts,
+.savepoint,
+.term__bar,
+.lab__head,
+.meter {
+  -webkit-user-select: none;
+  user-select: none;
+}
+
 a { color: inherit; }
 h1, h2, h3, p, ul, ol, dl, dd { margin: 0; }
 ul, ol { padding: 0; list-style: none; }
@@ -1166,10 +1186,101 @@ html.overdrive .scanlines {
   left: max(20px, env(safe-area-inset-left, 0px));
 }
 
-/* On phones the exit button owns the bottom edge, so toasts drop in under the HUD instead. */
 @media (max-width: 720px) {
-  .toasts { top: calc(env(safe-area-inset-top, 0px) + var(--hud-h) + 12px); bottom: auto; }
+  /* Toasts stay at the bottom, clear of the hero, and lift above the exit button during overdrive. */
+  html.overdrive .toasts { bottom: calc(76px + env(safe-area-inset-bottom, 0px)); }
+  .toast { padding: 10px 52px 12px 16px; }
+  .toast__title { font-size: 1.05rem; }
+  .toast__text { font-size: .82rem; }
   .term__log { font-size: .8rem; }
+}
+
+/* LEET mode: terminal green for 13.37 seconds */
+html.leet {
+  --ink: #040805;
+  --panel: #0b140e;
+  --panel-2: #102016;
+  --line: #1b3a26;
+  --line-bright: #2f6b45;
+  --dim: #7fb894;
+  --text: #d6ffe2;
+  --yellow: #3dff7a;
+  --magenta: #1fcf5f;
+  --cyan: #9dffbf;
+}
+html.leet main,
+html.leet .footer { text-shadow: 0 0 10px rgb(61 255 122 / .3); }
+/* Outlined kana have transparent fill, so a glow would render as a blurred blob. */
+html.leet .sec-head__kana,
+html.leet .hero__kana { text-shadow: none; }
+html.leet .card,
+html.leet .quest__card,
+html.leet .channel,
+html.leet .stats__info,
+html.leet .lab { box-shadow: inset 0 0 0 1px rgb(61 255 122 / .35), 0 0 28px rgb(61 255 122 / .08); }
+html.leet .hero__line { text-shadow: 0 0 18px rgb(61 255 122 / .55); }
+html.leet .hero__line--outline { text-shadow: none; filter: drop-shadow(0 0 6px rgb(61 255 122 / .6)); }
+html.leet .sec-head__title { text-shadow: 0 0 14px rgb(61 255 122 / .35); }
+html.leet .scanlines {
+  background: repeating-linear-gradient(to bottom, rgb(61 255 122 / .06) 0 1px, transparent 1px 3px);
+  mix-blend-mode: normal;
+}
+html.leet-glitch main,
+html.leet-glitch .hud { animation: glitch-flicker .5s steps(5) both; }
+@keyframes glitch-flicker {
+  0% { opacity: .3; translate: -6px 0; }
+  20% { opacity: 1; translate: 4px 0; }
+  40% { opacity: .5; translate: 0 0; }
+  60% { opacity: 1; translate: -3px 0; }
+  100% { opacity: 1; translate: 0 0; }
+}
+
+/* Save point: an RPG save box under the HUD */
+.savepoint {
+  position: fixed;
+  left: 50%;
+  top: calc(env(safe-area-inset-top, 0px) + var(--hud-h) + 16px);
+  z-index: 80;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  width: max-content;
+  max-width: calc(100vw - 32px);
+  padding: 14px 24px 14px 20px;
+  translate: -50% 0;
+  background: var(--panel-2);
+  border: 2px solid var(--text);
+  outline: 2px solid var(--line-bright);
+  outline-offset: 3px;
+  box-shadow: 0 16px 40px rgb(0 0 0 / .6);
+  animation: save-in .35s var(--ease-out) both;
+}
+.savepoint.is-out { animation: save-out .35s ease-in both; }
+.savepoint__crystal {
+  flex: none;
+  width: 18px;
+  height: 30px;
+  background: linear-gradient(var(--cyan), var(--magenta));
+  clip-path: polygon(50% 0, 100% 50%, 50% 100%, 0 50%);
+  animation: crystal 1.1s linear infinite;
+}
+.savepoint__body { display: grid; gap: 2px; }
+.savepoint__text { font: 600 .9rem var(--font-mono); letter-spacing: .04em; }
+.savepoint__text b { color: var(--yellow); font-weight: 600; }
+.savepoint__meta { font: 400 .72rem var(--font-mono); letter-spacing: .08em; text-transform: uppercase; color: var(--dim); }
+.savepoint__meta:empty { display: none; }
+@keyframes crystal { to { transform: rotateY(360deg); } }
+@keyframes save-in { from { opacity: 0; translate: -50% -14px; } }
+@keyframes save-out { to { opacity: 0; translate: -50% -14px; } }
+
+/* Coming back from another tab */
+html.reconnect main,
+html.reconnect .hud { animation: reconnect .6s steps(6) both; }
+@keyframes reconnect {
+  0% { opacity: .15; }
+  30% { opacity: .8; }
+  45% { opacity: .3; translate: 3px 0; }
+  70% { opacity: 1; translate: 0 0; }
 }
 
 /* ---------- Motion ---------- */

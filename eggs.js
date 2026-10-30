@@ -22,6 +22,9 @@
     { id: 'root', title: 'Root access', text: 'Opened the hidden terminal', hint: 'You are looking at it.' },
     { id: 'charge', title: 'Full charge', text: 'Fired a charged shot', hint: 'Hold your fire on an empty spot, then let go.' },
     { id: 'console', title: 'Source diver', text: 'Ran a command from the dev console', hint: 'Some messages only show up for developers.' },
+    { id: 'leet', title: 'Elite', text: 'Went 1337 for 13.37 seconds', hint: 'Some minutes are more elite than others. Impatient? Poke the clock five times, or type 1337 in here.' },
+    { id: 'save', title: 'Save point', text: 'Saved the game', hint: 'Old habits: save often. Ctrl+S, or type save in here.' },
+    { id: 'signal', title: 'Signal restored', text: 'Wandered off and came back', hint: 'Visit another tab for a moment, then come back.' },
   ];
   const STORE_KEY = 'td-secrets';
   const found = new Set(readStore());
@@ -161,6 +164,7 @@
 
   function enterOverdrive() {
     if (overdrive) return;
+    if (leet) exitLeet();
     if (reduceMotion) {
       setOverdrive(true);
       unlock('overdrive');
@@ -178,6 +182,172 @@
       unlock('overdrive');
     }, 1900);
   }
+
+  /* ---------- LEET mode: 13:37 in Dronten, five clicks on the clock, or "1337" in the terminal ---------- */
+
+  const LEET_MAP = { a: '4', e: '3', i: '1', o: '0', t: '7', s: '5', g: '6', b: '8', r: '2' };
+  const LEET_MS = 13370;
+  const LEET_ROOTS = '.hud__nav, .hud__place, main, .footer';
+  const LEET_SWEEP_MS = 700;
+  const toLeet = (text) => text.replace(/[aeiotsgbr]/gi, (c) => LEET_MAP[c.toLowerCase()]);
+  const nameLines = [...document.querySelectorAll('[data-scramble]')];
+  let leet = false;
+  let leetNodes = [];
+  let leetTimer = 0;
+  // Pending sweep steps, and the values an unfinished exit sweep still has to put back.
+  let sweepTimers = [];
+  let restoreList = [];
+
+  function textNodes() {
+    const nodes = [];
+    for (const root of document.querySelectorAll(LEET_ROOTS)) {
+      const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
+        acceptNode: (node) => (!node.nodeValue.trim() || node.parentElement.closest('[data-scramble], script, style')
+          ? NodeFilter.FILTER_REJECT
+          : NodeFilter.FILTER_ACCEPT),
+      });
+      while (walker.nextNode()) nodes.push(walker.currentNode);
+    }
+    return nodes;
+  }
+
+  // Applies each change with a delay based on its height on screen, so it reads as a scan wave moving down.
+  function sweep(entries) {
+    for (const [node, value] of entries) {
+      const top = node.parentElement?.getBoundingClientRect().top ?? 0;
+      const delay = reduceMotion ? 0 : Math.max(0, Math.min(1, top / innerHeight)) * LEET_SWEEP_MS;
+      if (delay === 0) node.nodeValue = value;
+      else sweepTimers.push(setTimeout(() => { node.nodeValue = value; }, delay));
+    }
+  }
+
+  function flushSweep() {
+    sweepTimers.forEach(clearTimeout);
+    sweepTimers = [];
+    for (const [node, value] of restoreList) node.nodeValue = value;
+    restoreList = [];
+  }
+
+  function enterLeet() {
+    if (leet) return;
+    if (overdrive) setOverdrive(false);
+    flushSweep();
+    leet = true;
+    leetNodes = textNodes().map((node) => [node, node.nodeValue]);
+    sweep(leetNodes.map(([node, value]) => [node, toLeet(value)]));
+    nameLines.forEach((el, i) => {
+      el.dataset.original ??= el.dataset.text ?? el.textContent;
+      el.dataset.text = toLeet(el.dataset.original);
+      td.scramble(el, 500 + i * 150);
+    });
+    root.classList.add('leet');
+    if (!reduceMotion) {
+      root.classList.add('leet-glitch');
+      setTimeout(() => root.classList.remove('leet-glitch'), 500);
+    }
+    td.field.setMode('leet');
+    unlock('leet');
+    leetTimer = setTimeout(exitLeet, LEET_MS);
+  }
+
+  function exitLeet() {
+    if (!leet) return;
+    leet = false;
+    clearTimeout(leetTimer);
+    sweepTimers.forEach(clearTimeout);
+    sweepTimers = [];
+    restoreList = leetNodes;
+    leetNodes = [];
+    sweep(restoreList);
+    sweepTimers.push(setTimeout(flushSweep, LEET_SWEEP_MS + 50));
+    nameLines.forEach((el, i) => {
+      el.dataset.text = el.dataset.original;
+      td.scramble(el, 500 + i * 150);
+    });
+    root.classList.remove('leet');
+    td.field.setMode('normal');
+  }
+
+  let clockClicks = [];
+  document.getElementById('clock')?.addEventListener('click', () => {
+    const now = Date.now();
+    clockClicks = clockClicks.filter((t) => now - t < 2000).concat(now);
+    if (clockClicks.length >= 5) {
+      clockClicks = [];
+      enterLeet();
+    }
+  });
+
+  const minuteFormat = new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/Amsterdam', hour: '2-digit', minute: '2-digit' });
+  let leetMinuteFired = false;
+  setInterval(() => {
+    const isLeetMinute = minuteFormat.format(new Date()) === '13:37';
+    if (isLeetMinute && !leetMinuteFired) enterLeet();
+    leetMinuteFired = isLeetMinute;
+  }, 1000);
+
+  /* ---------- Save point: Ctrl+S / Cmd+S ---------- */
+
+  let saveBox = null;
+  function savePoint() {
+    saveBox?.remove();
+    const box = make('div', 'savepoint', `
+      <span class="savepoint__crystal" aria-hidden="true"></span>
+      <span class="savepoint__body">
+        <span class="savepoint__text">Saving… don't turn off the power</span>
+        <span class="savepoint__meta"></span>
+      </span>`);
+    box.setAttribute('role', 'status');
+    document.body.append(box);
+    saveBox = box;
+    setTimeout(() => {
+      unlock('save');
+      box.querySelector('.savepoint__text').innerHTML = '<b>Game saved.</b>';
+      box.querySelector('.savepoint__meta').textContent = `Secrets ${found.size}/${SECRETS.length} · ${minuteFormat.format(new Date())} Dronten`;
+    }, 1000);
+    setTimeout(() => box.classList.add('is-out'), 2800);
+    setTimeout(() => {
+      box.remove();
+      if (saveBox === box) saveBox = null;
+    }, 3200);
+  }
+
+  /* ---------- Tab-away: the title and icon call the visitor back ---------- */
+
+  const originalTitle = document.title;
+  const favicon = document.querySelector('link[rel="icon"]');
+  const originalIcon = favicon?.getAttribute('href');
+  const LOST_ICON = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cpath d='M14 4h48L50 60H2z' fill='%23ff2a3d'/%3E%3Ctext x='31' y='47' font-family='Arial Black,Arial' font-weight='900' font-size='38' text-anchor='middle' fill='%2307060c'%3E!%3C/text%3E%3C/svg%3E";
+  let seenVisible = !document.hidden;
+  let wentAway = false;
+  let awayTimer = 0;
+
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) {
+      if (!seenVisible) return;
+      wentAway = true;
+      let flip = false;
+      const blink = () => {
+        flip = !flip;
+        document.title = flip ? '⚠ Signal lost…' : 'Come back?';
+      };
+      blink();
+      awayTimer = setInterval(blink, 1000);
+      favicon?.setAttribute('href', LOST_ICON);
+      return;
+    }
+    seenVisible = true;
+    if (!wentAway) return;
+    wentAway = false;
+    clearInterval(awayTimer);
+    document.title = originalTitle;
+    favicon?.setAttribute('href', originalIcon);
+    if (!reduceMotion) {
+      root.classList.add('reconnect');
+      setTimeout(() => root.classList.remove('reconnect'), 700);
+    }
+    unlock('signal');
+  });
 
   /* ---------- Terminal: type "sudo" ---------- */
 
@@ -306,6 +476,18 @@
     ],
     sudo: () => ['guest is not in the sudoers file. This incident will be reported.'],
     rm: () => ['rm: permission denied. Also, rude.'],
+    1337: () => {
+      if (leet) return ['Already elite.'];
+      setTimeout(() => {
+        term.close();
+        enterLeet();
+      }, 700);
+      return ['3l173 m0d3 3n6463d…'];
+    },
+    save: () => {
+      unlock('save');
+      return ['Saving… don\'t turn off the power', 'Game saved.'];
+    },
     overdrive: () => ['Cheats don\'t work from in here. Try the classic one on the page itself.'],
     date: () => [new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/Amsterdam', dateStyle: 'full', timeStyle: 'medium' }).format(new Date())],
     echo: (args) => [args.join(' ')],
@@ -402,8 +584,19 @@
 
   let typed = '';
   addEventListener('keydown', (e) => {
-    if (e.key === 'Escape' && overdrive && !dialogOpen()) {
-      setOverdrive(false);
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {
+      e.preventDefault();
+      if (term.open) {
+        run('save');
+        termLog.scrollTop = termLog.scrollHeight;
+      } else if (!dialogOpen()) {
+        savePoint();
+      }
+      return;
+    }
+    if (e.key === 'Escape' && !dialogOpen() && (overdrive || leet)) {
+      if (overdrive) setOverdrive(false);
+      else exitLeet();
       return;
     }
     if (isTyping(e.target) || dialogOpen() || e.ctrlKey || e.metaKey || e.altKey) return;

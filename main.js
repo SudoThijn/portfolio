@@ -47,6 +47,7 @@ document.querySelector('.hero__name')?.addEventListener('pointerenter', () => {
 const FIELD_PALETTES = {
   normal: { base: '#2a2542', far: '#4a4370', mid: '#2de2ff', hot: '#ff2d7a', scan: '#5b5320', wave: '#fcee0a', scanPeriod: 7000 },
   overdrive: { base: '#3a1a24', far: '#6b2a3a', mid: '#ffb800', hot: '#ff2a3d', scan: '#7a1f2c', wave: '#ffb800', scanPeriod: 1800 },
+  leet: { base: '#123a20', far: '#1f6b3a', mid: '#3dff7a', hot: '#b6ffcf', scan: '#1f8a45', wave: '#3dff7a', scanPeriod: 2500, rain: true },
 };
 
 function initField() {
@@ -60,6 +61,11 @@ function initField() {
   let dots = [];
   let palette = FIELD_PALETTES.normal;
   const waves = [];
+  const RAIN_GLYPHS = '0123456789ABCDEF1337#$%&<>';
+  const RAIN_SIZE = 16;
+  const RAIN_TRAIL = 14;
+  let columns = [];
+  let lastTime = 0;
   const api = {
     setMode(name) { palette = FIELD_PALETTES[name]; },
     shockwave(x, y) { waves.push({ x, y, start: performance.now() }); },
@@ -76,6 +82,33 @@ function initField() {
     for (let y = GAP / 2; y < height; y += GAP) {
       for (let x = GAP / 2; x < width; x += GAP) dots.push({ x, y });
     }
+    columns = [];
+    for (let x = RAIN_SIZE; x < width; x += RAIN_SIZE * 1.5) {
+      columns.push({ x, y: Math.random() * height, speed: 90 + Math.random() * 170, seed: Math.floor(Math.random() * 97) });
+    }
+  }
+
+  // Digital rain for LEET mode: each column is a bright head glyph with a fading trail.
+  function drawRain(dt) {
+    ctx.font = `600 ${RAIN_SIZE - 3}px "JetBrains Mono", monospace`;
+    ctx.textAlign = 'center';
+    for (const c of columns) {
+      c.y += c.speed * dt;
+      if (c.y - RAIN_TRAIL * RAIN_SIZE > height) {
+        c.y = -Math.random() * height * 0.4;
+        c.speed = 90 + Math.random() * 170;
+      }
+      for (let k = 0; k < RAIN_TRAIL; k++) {
+        const y = c.y - k * RAIN_SIZE;
+        if (y < -RAIN_SIZE || y > height + RAIN_SIZE) continue;
+        const row = Math.floor(y / RAIN_SIZE);
+        const glyph = RAIN_GLYPHS[(((c.seed + row * 31) % RAIN_GLYPHS.length) + RAIN_GLYPHS.length) % RAIN_GLYPHS.length];
+        ctx.globalAlpha = k === 0 ? 0.95 : (1 - k / RAIN_TRAIL) * 0.45;
+        ctx.fillStyle = k === 0 ? palette.hot : palette.mid;
+        ctx.fillText(glyph, c.x, y);
+      }
+    }
+    ctx.globalAlpha = 1;
   }
 
   function draw(time) {
@@ -120,6 +153,9 @@ function initField() {
       ctx.fillStyle = color;
       ctx.fillRect(x - size / 2, y - size / 2, size, size);
     }
+    const dt = Math.max(0, Math.min((time - lastTime) / 1000, 0.1));
+    lastTime = time;
+    if (palette.rain) drawRain(dt);
   }
 
   let frame = 0;
