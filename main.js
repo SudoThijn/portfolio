@@ -44,14 +44,26 @@ document.querySelector('.hero__name')?.addEventListener('pointerenter', () => {
 
 /* ---------- Dot field ---------- */
 
+const FIELD_PALETTES = {
+  normal: { base: '#2a2542', far: '#4a4370', mid: '#2de2ff', hot: '#ff2d7a', scan: '#5b5320', wave: '#fcee0a', scanPeriod: 7000 },
+  overdrive: { base: '#3a1a24', far: '#6b2a3a', mid: '#ffb800', hot: '#ff2a3d', scan: '#7a1f2c', wave: '#ffb800', scanPeriod: 1800 },
+};
+
 function initField() {
   const canvas = document.getElementById('field');
   const ctx = canvas.getContext('2d');
   const GAP = 30;
   const RADIUS = 170;
+  const WAVE_MS = 900;
   let width = 0;
   let height = 0;
   let dots = [];
+  let palette = FIELD_PALETTES.normal;
+  const waves = [];
+  const api = {
+    setMode(name) { palette = FIELD_PALETTES[name]; },
+    shockwave(x, y) { waves.push({ x, y, start: performance.now() }); },
+  };
 
   function resize() {
     const dpr = Math.min(devicePixelRatio || 1, 2);
@@ -69,7 +81,9 @@ function initField() {
   function draw(time) {
     ctx.clearRect(0, 0, width, height);
     // A slow scan line sweeps down the screen, lighting the dots it passes.
-    const scanY = ((time / 7000) % 1.3) * height * 1.3 - height * 0.15;
+    const scanY = ((time / palette.scanPeriod) % 1.3) * height * 1.3 - height * 0.15;
+    while (waves.length && time - waves[0].start > WAVE_MS) waves.shift();
+    const waveReach = Math.hypot(width, height);
     for (const d of dots) {
       const dx = d.x - pointer.x;
       const dy = d.y - pointer.y;
@@ -77,17 +91,31 @@ function initField() {
       let x = d.x;
       let y = d.y;
       let size = 1.2;
-      let color = '#2a2542';
+      let color = palette.base;
       if (dist < RADIUS) {
         const f = 1 - dist / RADIUS;
         const push = f * f * 16;
         x += (dx / (dist || 1)) * push;
         y += (dy / (dist || 1)) * push;
         size = 1.2 + f * 1.8;
-        color = f > 0.72 ? '#ff2d7a' : f > 0.3 ? '#2de2ff' : '#4a4370';
+        color = f > 0.72 ? palette.hot : f > 0.3 ? palette.mid : palette.far;
       } else if (Math.abs(d.y - scanY) < GAP * 0.6) {
-        color = '#5b5320';
+        color = palette.scan;
         size = 1.6;
+      }
+      for (const w of waves) {
+        const age = (time - w.start) / WAVE_MS;
+        const wx = d.x - w.x;
+        const wy = d.y - w.y;
+        const wd = Math.hypot(wx, wy) || 1;
+        const off = Math.abs(wd - age * waveReach * 0.6);
+        if (off < 60) {
+          const f = (1 - off / 60) * (1 - age);
+          x += (wx / wd) * f * 28;
+          y += (wy / wd) * f * 28;
+          size += f * 2.4;
+          if (f > 0.15) color = palette.wave;
+        }
       }
       ctx.fillStyle = color;
       ctx.fillRect(x - size / 2, y - size / 2, size, size);
@@ -108,17 +136,25 @@ function initField() {
 
   if (reduceMotion) {
     draw(0);
-    return;
+    api.setMode = (name) => {
+      palette = FIELD_PALETTES[name];
+      draw(0);
+    };
+    return api;
   }
   frame = requestAnimationFrame(loop);
   document.addEventListener('visibilitychange', () => {
     cancelAnimationFrame(frame);
     if (!document.hidden) frame = requestAnimationFrame(loop);
   });
+  return api;
 }
-initField();
+const field = initField();
 
 /* ---------- Target-lock reticle ---------- */
+
+// Set by the charge-shot egg: 0 is idle, 1 is fully charged.
+const reticleState = { charge: 0 };
 
 function initReticle() {
   if (!finePointer || reduceMotion) return;
@@ -137,11 +173,12 @@ function initReticle() {
 
   const lerp = (a, b, t) => a + (b - a) * t;
   function follow() {
-    let tx = pointer.x - IDLE / 2;
-    let ty = pointer.y - IDLE / 2;
-    let tw = IDLE;
-    let th = IDLE;
-    if (lockTarget) {
+    const size = IDLE * (1 - reticleState.charge * 0.5);
+    let tx = pointer.x - size / 2;
+    let ty = pointer.y - size / 2;
+    let tw = size;
+    let th = size;
+    if (lockTarget && !reticleState.charge) {
       const r = lockTarget.getBoundingClientRect();
       tx = r.left - 6;
       ty = r.top - 6;
@@ -155,6 +192,9 @@ function initReticle() {
     reticle.style.transform = `translate(${box.x}px, ${box.y}px)`;
     reticle.style.width = `${box.w}px`;
     reticle.style.height = `${box.h}px`;
+    reticle.style.setProperty('--charge', reticleState.charge);
+    reticle.classList.toggle('is-charging', reticleState.charge > 0.1);
+    reticle.classList.toggle('is-full', reticleState.charge >= 1);
     requestAnimationFrame(follow);
   }
   requestAnimationFrame(follow);
@@ -360,6 +400,9 @@ function initLab() {
   render();
 }
 initLab();
+
+// Hooks for eggs.js, which loads after this file.
+window.__td = { pointer, reduceMotion, finePointer, scramble, field, reticle: reticleState };
 
 /* ---------- Copy email ---------- */
 

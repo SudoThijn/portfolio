@@ -12,6 +12,7 @@
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&family=Tektur:wdth,wght@75..100,400..900&family=Zen+Kaku+Gothic+New:wght@700;900&display=swap">
   <link rel="stylesheet" href="style.css">
   <script src="main.js" defer></script>
+  <script src="eggs.js" defer></script>
 </head>
 <body>
   <canvas id="field" aria-hidden="true"></canvas>
@@ -49,7 +50,7 @@
             <a class="btn btn--primary" href="#contact"><span>Get in touch</span></a>
             <a class="btn btn--ghost" href="#profile"><span>View profile</span></a>
           </div>
-          <p class="status mono" data-intro="5"><span class="pulse"></span>Available from January 2027</p>
+          <p class="status mono" data-intro="5"><span class="pulse"></span><span class="status__text">Available from January 2027</span></p>
         </div>
 
         <div class="hero__emblem" aria-hidden="true">
@@ -95,7 +96,7 @@
 
         <div class="sheet">
           <aside class="card idcard" data-reveal>
-            <div class="idcard__strip mono"><span>Player card</span><span>ID//SudoThijn</span></div>
+            <div class="idcard__strip mono"><span>Player card</span><button class="idcard__id" type="button" id="open-terminal">ID//SudoThijn</button></div>
             <div class="idcard__top">
               <div class="level">
                 <span class="level__lv mono">LV</span>

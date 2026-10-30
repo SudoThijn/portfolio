@@ -1,0 +1,470 @@
+(() => {
+  const td = window.__td;
+  if (!td) return;
+  const root = document.documentElement;
+  const { reduceMotion, finePointer } = td;
+  // Only mention the Esc key where there is likely a keyboard.
+  const escHint = finePointer ? ' · Esc' : '';
+
+  const make = (tag, className, html = '') => {
+    const el = document.createElement(tag);
+    el.className = className;
+    el.innerHTML = html;
+    return el;
+  };
+  const isTyping = (el) => el.closest?.('input, textarea, select, [contenteditable="true"]');
+  const dialogOpen = () => !!document.querySelector('dialog[open]');
+
+  /* ---------- Secrets: achievements, toasts and the level-up payoff ---------- */
+
+  const SECRETS = [
+    { id: 'overdrive', title: 'Limit break', text: 'Entered the Konami code', hint: 'An old cheat code still works here. ↑ ↑ ↓ ↓ …' },
+    { id: 'root', title: 'Root access', text: 'Opened the hidden terminal', hint: 'You are looking at it.' },
+    { id: 'charge', title: 'Full charge', text: 'Fired a charged shot', hint: 'Hold your fire on an empty spot, then let go.' },
+    { id: 'console', title: 'Source diver', text: 'Ran a command from the dev console', hint: 'Some messages only show up for developers.' },
+  ];
+  const STORE_KEY = 'td-secrets';
+  const found = new Set(readStore());
+
+  function readStore() {
+    try {
+      return JSON.parse(localStorage.getItem(STORE_KEY)) || [];
+    } catch {
+      return [];
+    }
+  }
+  function writeStore() {
+    try {
+      localStorage.setItem(STORE_KEY, JSON.stringify([...found]));
+    } catch {}
+  }
+
+  const chip = make('span', 'hud__secrets', '◆ Secrets <b></b>');
+  document.querySelector('.hud__meta')?.prepend(chip);
+  function renderChip() {
+    chip.hidden = found.size === 0;
+    chip.querySelector('b').textContent = `${found.size}/${SECRETS.length}`;
+  }
+  renderChip();
+
+  const toasts = make('div', 'toasts');
+  toasts.setAttribute('role', 'status');
+  toasts.setAttribute('aria-live', 'polite');
+  document.body.append(toasts);
+
+  function toast(secret) {
+    const t = make('div', 'toast', `
+      <span class="toast__kicker">◆ Achievement unlocked</span>
+      <span class="toast__title">${secret.title}</span>
+      <span class="toast__text">${secret.text}</span>
+      <span class="toast__count">${found.size}/${SECRETS.length}</span>`);
+    toasts.append(t);
+    setTimeout(() => t.classList.add('is-out'), 4200);
+    setTimeout(() => t.remove(), 4800);
+  }
+
+  function unlock(id) {
+    if (found.has(id)) return;
+    found.add(id);
+    writeStore();
+    renderChip();
+    toast(SECRETS.find((s) => s.id === id));
+    if (found.size === SECRETS.length) setTimeout(levelUp, 1400);
+  }
+
+  function levelUp() {
+    const dialog = make('dialog', 'levelup', `
+      <div class="levelup__lines" aria-hidden="true"></div>
+      <div class="levelup__card">
+        <p class="levelup__kicker">◆ All secrets found ${SECRETS.length}/${SECRETS.length}</p>
+        <h2 class="levelup__title" id="levelup-title">Level up!</h2>
+        <p class="levelup__text">You kept digging until you found everything hidden here. That's how I work too.</p>
+        <div class="levelup__actions">
+          <a class="btn btn--primary" href="#contact"><span>Get in touch</span></a>
+          <button class="btn btn--ghost" type="button"><span>Close</span></button>
+        </div>
+      </div>`);
+    dialog.setAttribute('aria-labelledby', 'levelup-title');
+    document.body.append(dialog);
+    dialog.querySelectorAll('a, button').forEach((el) => el.addEventListener('click', () => dialog.close()));
+    dialog.addEventListener('click', (e) => e.target === dialog && dialog.close());
+    dialog.addEventListener('close', () => dialog.remove());
+    dialog.showModal();
+  }
+
+  /* ---------- Konami code: OVERDRIVE ---------- */
+
+  const KONAMI = ['arrowup', 'arrowup', 'arrowdown', 'arrowdown', 'arrowleft', 'arrowright', 'arrowleft', 'arrowright', 'b', 'a'];
+  let konamiPos = 0;
+
+  function feedKonami(key) {
+    if (key === KONAMI[konamiPos]) konamiPos++;
+    // A third "up" keeps the sequence alive instead of resetting it.
+    else konamiPos = key === 'arrowup' ? (konamiPos === 2 ? 2 : 1) : 0;
+    if (konamiPos === KONAMI.length) {
+      konamiPos = 0;
+      enterOverdrive();
+    }
+  }
+
+  // On touch screens the code is swipes for the arrows, then two taps for B and A.
+  let touchStart = null;
+  addEventListener('touchstart', (e) => {
+    touchStart = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+  }, { passive: true });
+  addEventListener('touchend', (e) => {
+    if (!touchStart) return;
+    const dx = e.changedTouches[0].clientX - touchStart.x;
+    const dy = e.changedTouches[0].clientY - touchStart.y;
+    touchStart = null;
+    if (Math.max(Math.abs(dx), Math.abs(dy)) < 12) feedKonami(konamiPos >= 8 ? KONAMI[konamiPos] : 'tap');
+    else if (Math.abs(dx) > Math.abs(dy)) feedKonami(dx > 0 ? 'arrowright' : 'arrowleft');
+    else feedKonami(dy > 0 ? 'arrowdown' : 'arrowup');
+  }, { passive: true });
+
+  const cutin = make('div', 'cutin', `
+    <div class="cutin__flash"></div>
+    <div class="cutin__band">
+      <div class="cutin__lines"></div>
+      <div class="cutin__content">
+        <span class="cutin__kana">オーバードライブ</span>
+        <span class="cutin__title">Overdrive</span>
+        <span class="cutin__sub">Limit break // all stats maxed</span>
+      </div>
+    </div>`);
+  cutin.setAttribute('aria-hidden', 'true');
+  document.body.append(cutin);
+
+  const exitButton = make('button', 'btn btn--small btn--primary od-exit', `<span>Exit overdrive${escHint}</span>`);
+  exitButton.type = 'button';
+  exitButton.hidden = true;
+  exitButton.addEventListener('click', () => setOverdrive(false));
+  document.body.append(exitButton);
+
+  const levelLabel = document.querySelector('.hero__tags .block--magenta > span');
+  const statusLabel = document.querySelector('.status__text');
+  const originals = { level: levelLabel?.textContent, status: statusLabel?.textContent };
+  let overdrive = false;
+
+  function setOverdrive(on) {
+    overdrive = on;
+    root.classList.toggle('overdrive', on);
+    td.field.setMode(on ? 'overdrive' : 'normal');
+    exitButton.hidden = !on;
+    if (statusLabel) statusLabel.textContent = on ? `Overdrive active${finePointer ? ' · Esc to exit' : ''}` : originals.status;
+    if (levelLabel) {
+      levelLabel.textContent = on ? 'LV.99' : originals.level;
+      delete levelLabel.dataset.text;
+      td.scramble(levelLabel, 700);
+    }
+  }
+
+  function enterOverdrive() {
+    if (overdrive) return;
+    if (reduceMotion) {
+      setOverdrive(true);
+      unlock('overdrive');
+      return;
+    }
+    cutin.classList.remove('is-playing');
+    void cutin.offsetWidth;
+    cutin.classList.add('is-playing');
+    root.classList.add('od-shake');
+    // The palette swaps while the band covers the screen, so the change lands as a reveal.
+    setTimeout(() => setOverdrive(true), 520);
+    setTimeout(() => root.classList.remove('od-shake'), 650);
+    setTimeout(() => {
+      cutin.classList.remove('is-playing');
+      unlock('overdrive');
+    }, 1900);
+  }
+
+  /* ---------- Terminal: type "sudo" ---------- */
+
+  const term = make('dialog', 'term', `
+    <div class="term__bar"><span>td-os // terminal</span><button class="term__close" type="button">${finePointer ? 'Esc · close' : 'Close'}</button></div>
+    <div class="term__log" id="term-log"></div>
+    <form class="term__form" method="dialog">
+      <label class="term__prompt" for="term-input">guest@td-os:~$</label>
+      <input class="term__input" id="term-input" type="text" autocomplete="off" autocapitalize="off" spellcheck="false">
+    </form>`);
+  term.setAttribute('aria-label', 'Terminal');
+  document.body.append(term);
+  const termLog = term.querySelector('.term__log');
+  const termInput = term.querySelector('.term__input');
+  const termPrompt = term.querySelector('.term__prompt');
+  const history = [];
+  let historyPos = 0;
+
+  const FILES = {
+    'about.txt': [
+      'Thijn Douwma, 23. Frontend developer from Dronten, NL.',
+      'Vue, React and browser extensions. 8+ years of code, 2.5 of them professional.',
+      'Available from January 2027.',
+    ],
+    'quests.log': [
+      '[ACTIVE]    2024 → Jan 2027',
+      '  Frontend developer @ Conduction B.V.',
+      '[ENDED]     2023 → 2024',
+      '  HBO Software Engineering @ Windesheim',
+      '[COMPLETED] 2020 → 2023',
+      '  MBO 4 Software Development @ ROC van Flevoland',
+    ],
+    'contact.txt': [
+      'email     thijn.douwma@outlook.com',
+      'linkedin  linkedin.com/in/thijn-douwma',
+      'github    github.com/SudoThijn',
+    ],
+  };
+
+  // A tiny file system: the home folder holds FILES plus a secrets/ folder with one file per achievement.
+  let cwd = [];
+  const promptText = () => `guest@td-os:${cwd.length ? `~/${cwd.join('/')}` : '~'}$`;
+
+  function secretFiles() {
+    return SECRETS.map((s, i) => (found.has(s.id)
+      ? { name: `${s.title.toLowerCase().replace(/\s+/g, '-')}.txt`, lines: [`◆ ${s.title}`, s.text] }
+      : { name: `classified-${i + 1}.locked`, locked: true, hint: s.hint }));
+  }
+
+  function resolvePath(path) {
+    const parts = path.startsWith('~') ? [] : [...cwd];
+    for (const segment of path.replace(/^~\/?/, '').split('/')) {
+      if (!segment || segment === '.') continue;
+      if (segment === '..') parts.pop();
+      else parts.push(segment);
+    }
+    return parts;
+  }
+
+  function lookup(parts) {
+    if (!parts.length) return { dir: true, entries: [...Object.keys(FILES), 'secrets/'] };
+    if (parts[0] === 'secrets') {
+      if (parts.length === 1) return { dir: true, entries: secretFiles().map((f) => f.name), list: true };
+      return parts.length === 2 ? secretFiles().find((f) => f.name === parts[1]) : null;
+    }
+    return parts.length === 1 && FILES[parts[0]] ? { lines: FILES[parts[0]] } : null;
+  }
+
+  const COMMANDS = {
+    help: () => [
+      'help             list commands',
+      'whoami           who you are',
+      'ls [dir]         list files',
+      'cd <dir>         change folder',
+      'pwd              where you are',
+      'cat <file>       print a file',
+      'secrets          achievements and hints',
+      'secrets reset    forget found secrets',
+      'hire             start the hire sequence',
+      'date             time in Dronten',
+      'clear            clear the screen',
+      'exit             close the terminal',
+    ],
+    whoami: () => ['guest', 'The owner is Thijn Douwma. Try: cat about.txt'],
+    ls: ([path = '.']) => {
+      const node = lookup(resolvePath(path));
+      if (!node) return [`ls: ${path}: no such file or folder`];
+      if (!node.dir) return [path];
+      return node.list ? node.entries : [node.entries.join('  ')];
+    },
+    cd: ([path = '~']) => {
+      if (path.startsWith('/')) return [`cd: ${path}: permission denied. Guests stay in ~`];
+      const parts = resolvePath(path);
+      const node = lookup(parts);
+      if (!node) return [`cd: ${path}: no such folder`];
+      if (!node.dir) return [`cd: ${path}: not a folder`];
+      cwd = parts;
+      return [];
+    },
+    pwd: () => [`/home/guest${cwd.length ? `/${cwd.join('/')}` : ''}`],
+    cat: ([path]) => {
+      if (!path) return ['cat: missing file name. Try: ls'];
+      const node = lookup(resolvePath(path));
+      if (!node) return [`cat: ${path}: no such file`];
+      if (node.dir) return [`cat: ${path}: is a folder. Try: cd ${path}`];
+      if (node.locked) return [`cat: ${path}: permission denied`, `hint: ${node.hint}`];
+      return node.lines;
+    },
+    secrets: ([arg]) => {
+      if (arg === 'reset') {
+        found.clear();
+        writeStore();
+        renderChip();
+        return ['Secrets reset. Happy hunting.'];
+      }
+      return [
+        `${found.size}/${SECRETS.length} found`,
+        ...SECRETS.map((s) => (found.has(s.id) ? `[x] ${s.title}: ${s.text}` : `[ ] ???: ${s.hint}`)),
+      ];
+    },
+    hire: () => [
+      'Initiating hire sequence…',
+      '[████████████████████] 100%',
+      'Candidate ready. Send the offer to thijn.douwma@outlook.com',
+      'Available from January 2027.',
+    ],
+    sudo: () => ['guest is not in the sudoers file. This incident will be reported.'],
+    rm: () => ['rm: permission denied. Also, rude.'],
+    overdrive: () => ['Cheats don\'t work from in here. Try the classic one on the page itself.'],
+    date: () => [new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/Amsterdam', dateStyle: 'full', timeStyle: 'medium' }).format(new Date())],
+    echo: (args) => [args.join(' ')],
+    clear: () => {
+      termLog.textContent = '';
+      return [];
+    },
+    exit: () => {
+      term.close();
+      return [];
+    },
+  };
+
+  function print(text, className = '') {
+    const line = make('div', className);
+    line.textContent = text;
+    termLog.append(line);
+  }
+
+  function run(line) {
+    print(`${promptText()} ${line}`, 'in');
+    const [name, ...args] = line.trim().split(/\s+/);
+    if (!name) return;
+    const command = COMMANDS[name.toLowerCase()];
+    if (!command) {
+      print(`command not found: ${name}. Type help.`, 'err');
+      return;
+    }
+    command(args).forEach((text) => print(text));
+    termPrompt.textContent = promptText();
+  }
+
+  term.querySelector('.term__form').addEventListener('submit', (e) => {
+    e.preventDefault();
+    const line = termInput.value;
+    termInput.value = '';
+    if (line.trim()) history.push(line);
+    historyPos = history.length;
+    run(line);
+    termLog.scrollTop = termLog.scrollHeight;
+  });
+  termInput.addEventListener('keydown', (e) => {
+    if (e.key === 'ArrowUp' && historyPos > 0) termInput.value = history[--historyPos];
+    else if (e.key === 'ArrowDown' && historyPos < history.length) termInput.value = history[++historyPos] ?? '';
+    else return;
+    e.preventDefault();
+  });
+  term.querySelector('.term__close').addEventListener('click', () => term.close());
+  term.addEventListener('click', (e) => e.target === term && termInput.focus());
+
+  function openTerminal() {
+    if (term.open) return;
+    if (!termLog.childElementCount) {
+      print('TD-OS v1.0 · root access granted (not really)', 'dim');
+      print('Type help to list commands.', 'dim');
+    }
+    term.showModal();
+    termInput.focus();
+    unlock('root');
+  }
+  document.getElementById('open-terminal')?.addEventListener('click', openTerminal);
+
+  /* ---------- Keyboard: sudo, Konami, Esc ---------- */
+
+  let typed = '';
+  addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && overdrive && !dialogOpen()) {
+      setOverdrive(false);
+      return;
+    }
+    if (isTyping(e.target) || dialogOpen() || e.ctrlKey || e.metaKey || e.altKey) return;
+    const key = e.key.toLowerCase();
+    // Holding Shift for a capital B shouldn't break the code.
+    if (key === 'shift' || key === 'capslock') return;
+    feedKonami(key);
+    if (key.length !== 1) return;
+    typed = (typed + key).slice(-4);
+    if (typed === 'sudo') {
+      typed = '';
+      // Without this, the final "o" lands in the freshly focused terminal input.
+      e.preventDefault();
+      openTerminal();
+    }
+  });
+
+  /* ---------- Charge shot: hold on empty space, release when full ---------- */
+
+  const CHARGE_MS = 900;
+  const NOT_EMPTY = 'a, button, input, textarea, select, label, dialog, .stat, .lab';
+  const charge = make('div', 'charge');
+  charge.setAttribute('aria-hidden', 'true');
+  document.body.append(charge);
+  let charging = false;
+  let chargeStart = 0;
+  let chargeFrame = 0;
+  const at = { x: 0, y: 0 };
+
+  function place(el, x, y) {
+    el.style.left = `${x}px`;
+    el.style.top = `${y}px`;
+  }
+
+  function chargeTick() {
+    const elapsed = performance.now() - chargeStart;
+    const level = Math.min(elapsed / CHARGE_MS, 1);
+    td.reticle.charge = level;
+    charge.style.setProperty('--charge', level);
+    // A quick click shouldn't flash the ring, so it only shows once a hold is clearly happening.
+    charge.classList.toggle('is-on', elapsed > 140);
+    charge.classList.toggle('is-full', level >= 1);
+    if (charging) chargeFrame = requestAnimationFrame(chargeTick);
+  }
+
+  addEventListener('pointerdown', (e) => {
+    if (e.button !== 0 || e.target.closest(NOT_EMPTY) || dialogOpen()) return;
+    charging = true;
+    chargeStart = performance.now();
+    at.x = e.clientX;
+    at.y = e.clientY;
+    place(charge, at.x, at.y);
+    chargeTick();
+  });
+  addEventListener('pointermove', (e) => {
+    if (!charging) return;
+    at.x = e.clientX;
+    at.y = e.clientY;
+    place(charge, at.x, at.y);
+  }, { passive: true });
+
+  function release(fire) {
+    if (!charging) return;
+    charging = false;
+    cancelAnimationFrame(chargeFrame);
+    const full = td.reticle.charge >= 1;
+    td.reticle.charge = 0;
+    charge.classList.remove('is-on', 'is-full');
+    if (!fire || !full) return;
+    td.field.shockwave(at.x, at.y);
+    if (!reduceMotion) {
+      const burst = make('div', 'burst');
+      place(burst, at.x, at.y);
+      document.body.append(burst);
+      setTimeout(() => burst.remove(), 700);
+    }
+    unlock('charge');
+  }
+  addEventListener('pointerup', () => release(true));
+  addEventListener('pointercancel', () => release(false));
+
+  /* ---------- DevTools console greeting ---------- */
+
+  console.log(
+    '%c████████ ██████ \n   ██    ██   ██\n   ██    ██   ██\n   ██    ██   ██\n   ██    ██████ ',
+    'color:#fcee0a;font:700 12px/1.1 monospace',
+  );
+  console.log('%cLooking at the source? Then we should talk: thijn.douwma@outlook.com', 'color:#2de2ff;font:600 13px monospace');
+  console.log('%cThere is a secret for people who read consoles. Run: hack()', 'color:#ff2d7a;font:12px monospace');
+  window.hack = () => {
+    unlock('console');
+    return 'ACCESS GRANTED. Secret unlocked: Source diver.';
+  };
+})();
