@@ -3,7 +3,7 @@ import { onBeforeUnmount, onMounted, ref } from 'vue'
 import { clockFormat } from '@/lib/env'
 import { found, SECRETS } from '@/eggs/secrets'
 import { clockPressed } from '@/eggs/modes'
-import { soundOn, toggleSound } from '@/lib/sound'
+import { soundOn, soundPlaying, toggleSound } from '@/lib/sound'
 
 const NAV = [
   { href: '#profile', label: 'Profile' },
@@ -63,6 +63,16 @@ onBeforeUnmount(() => {
         ><span>{{ item.label }}</span></a
       >
     </nav>
+    <button
+      class="hud__sound mono"
+      type="button"
+      :data-on="soundOn"
+      :data-playing="soundPlaying"
+      @click="toggleSound"
+    >
+      <span class="hud__bars" aria-hidden="true"><i></i><i></i><i></i></span>
+      <span class="hud__sound-label">Sound: {{ soundOn ? 'on' : 'off' }}</span>
+    </button>
     <p class="hud__meta mono">
       <span class="hud__secrets" :hidden="found.size === 0"
         >◆ Secrets <b>{{ found.size }}/{{ SECRETS.length }}</b></span
@@ -71,10 +81,6 @@ onBeforeUnmount(() => {
       <span id="clock" @click="clockPressed">{{ clock }}</span>
       <span class="hud__place">Dronten</span>
     </p>
-    <button class="hud__sound mono" type="button" :data-on="soundOn" @click="toggleSound">
-      <span class="hud__bars" aria-hidden="true"><i></i><i></i><i></i></span>
-      <span class="hud__sound-label">Sound: {{ soundOn ? 'on' : 'off' }}</span>
-    </button>
     <div class="hud__progress" aria-hidden="true">
       <span id="progress" :style="{ transform: `scaleX(${progress})` }"></span>
     </div>

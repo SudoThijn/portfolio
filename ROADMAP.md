@@ -58,11 +58,11 @@ Facts to confirm or decide:
 
 The hardest part, because the right sounds are hard to find. Ground rules:
 
-- Sound is off by default, with a mute/unmute toggle in the HUD. Browsers only allow audio after a visitor interaction anyway. Remember the choice.
+- Sound is on by default (decided 2026-10-31), with a mute/unmute toggle in the HUD. Browsers only allow audio after a visitor interaction, so it starts on the first click, tap or key press, and the toggle shows animated bars only once audio is really playing. The choice is remembered.
 - Effects stay short and quiet. Music loops are wanted for the background, OVERDRIVE (meltdown) and LEET, and they only play while sound is on.
 - Anything under CC-BY is allowed as long as it is credited, for example in a credits popup from the footer. Keep a credit line per file.
 
-Built (2026-10-31): `src/lib/sound.ts` is a Web Audio engine that is only created, fetched and decoded after sound is switched on. The HUD has a "Sound: on/off" toggle (off by default, saved in `td-sound`, and a saved "on" starts on the first gesture of the next visit). Wired so far: the quiet hum (18%), the Hard Boss Battle 1 song while OVERDRIVE is active, the charge shot (starts with the ring, fires on a full release, fizzles out on an early one), Warp Drive when LEET starts, "Arcade bonus" on the level up, and the Menu open/close sounds for the credits popup. The footer "Sound credits" button opens that popup, which CC-BY requires. Levels are constants at the top of `sound.ts`. Tested only in Chromium; Safari's support for OGG Vorbis was not checked, so check it before launch. `e2e/sound.spec.ts` records every buffer the page starts and asserts which sound plays for each event.
+Built (2026-10-31): `src/lib/sound.ts` is a Web Audio engine that is only created, fetched and decoded after sound is switched on. The HUD has a "Sound: on/off" toggle, left of the secrets counter (on by default, saved in `td-sound`, and it starts on the first gesture of a visit). Wired so far: the quiet hum (18%), the Hard Boss Battle 1 song while OVERDRIVE is active, the charge shot (starts with the ring, fires on a full release, fizzles out on an early one), Warp Drive when LEET starts, "Arcade bonus" on the level up, and the Menu open/close sounds for the credits popup. The footer "Sound credits" button opens that popup, which CC-BY requires. Levels are constants at the top of `sound.ts`. Tested only in Chromium; Safari's support for OGG Vorbis was not checked, so check it before launch. `e2e/sound.spec.ts` records every buffer the page starts and asserts which sound plays for each event.
 
 Decisions so far (2026-10-31):
 

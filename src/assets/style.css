@@ -315,7 +315,6 @@ body::before {
 .hud__meta {
   display: flex;
   align-items: center;
-  margin-left: auto;
   color: var(--dim);
   font-variant-numeric: tabular-nums;
 }
@@ -325,6 +324,7 @@ body::before {
   display: flex;
   align-items: center;
   gap: .7em;
+  margin-left: auto;
   padding: 6px 10px;
   border: 1px solid var(--line-bright);
   background: none;
@@ -339,7 +339,7 @@ body::before {
 .hud__sound[data-on="true"] { color: var(--yellow); border-color: var(--yellow); }
 .hud__bars { display: flex; align-items: flex-end; gap: 2px; height: 12px; }
 .hud__bars i { width: 3px; height: 100%; background: currentColor; transform: scaleY(.25); transform-origin: bottom; }
-.hud__sound[data-on="true"] .hud__bars i { animation: sound-bars .8s ease-in-out infinite alternate; }
+.hud__sound[data-playing="true"] .hud__bars i { animation: sound-bars .8s ease-in-out infinite alternate; }
 .hud__bars i:nth-child(2) { animation-delay: -.3s; }
 .hud__bars i:nth-child(3) { animation-delay: -.55s; }
 @keyframes sound-bars { from { transform: scaleY(.25); } to { transform: scaleY(1); } }
@@ -1388,6 +1388,7 @@ html.js .ticker { animation: slam .8s var(--ease-out) .9s backwards; }
   .hud__nav { gap: 0; margin-left: auto; }
   .hud__nav a { padding: .55em .6em; font-size: .7rem; letter-spacing: .06em; }
   .hud__logo { width: 44px; height: 30px; font-size: .9rem; }
+  .hud__sound { margin-left: 0; }
   .hud__sound-label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 
   .hero { min-height: 0; padding-top: calc(var(--hud-h) + 40px); padding-bottom: 130px; }

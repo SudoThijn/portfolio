@@ -1,4 +1,4 @@
-import { expect, test, type Page } from '@playwright/test'
+import { expect, test, type Locator, type Page } from '@playwright/test'
 
 interface Voice {
   duration: number
@@ -63,6 +63,12 @@ test.beforeEach(async ({ page }) => {
 })
 
 const toggle = (page: Page) => page.locator('.hud__sound')
+
+async function boxOf(locator: Locator) {
+  const box = await locator.boundingBox()
+  if (!box) throw new Error('element is not visible')
+  return box
+}
 const voices = (page: Page) => page.evaluate(() => window.__voices)
 const storedPreference = (page: Page) => page.evaluate(() => localStorage.getItem('td-sound'))
 
@@ -77,11 +83,16 @@ async function voiceLike(page: Page, duration: number, loop: boolean) {
     (await voices(page)).filter((v) => Math.abs(v.duration - duration) < 0.01 && v.loop === loop)
 }
 
+// Sound is on by default but waits for a gesture, so a key press gets it going.
 async function soundOn(page: Page) {
   await page.goto('/')
-  await toggle(page).click()
   await expect(toggle(page)).toContainText('Sound: on')
+  await page.keyboard.press('x')
+  await expect(toggle(page)).toHaveAttribute('data-playing', 'true')
 }
+
+// Seeds the saved choice, so call it before the page loads.
+const soundOff = (page: Page) => page.addInitScript(() => localStorage.setItem('td-sound', 'off'))
 
 // The charge shot ignores interactive elements, so it needs a point on plain page background.
 async function emptySpot(page: Page) {
@@ -98,41 +109,76 @@ async function emptySpot(page: Page) {
 }
 
 test.describe('switching sound on and off', () => {
-  test('is off by default and loads nothing', async ({ page }) => {
+  test('is on by default, and loads and plays nothing until the first gesture', async ({
+    page,
+  }) => {
     const audioRequests: string[] = []
     page.on('request', (request) => {
       if (request.url().endsWith('.ogg')) audioRequests.push(request.url())
     })
     await page.goto('/')
-    await expect(toggle(page)).toContainText('Sound: off')
+    await expect(toggle(page)).toContainText('Sound: on')
+    await expect(toggle(page)).toHaveAttribute('data-playing', 'false')
     await pause(500)
     expect(audioRequests).toEqual([])
     expect(await voices(page)).toEqual([])
     expect(await storedPreference(page)).toBeNull()
+
+    await page.keyboard.press('x')
+    await expect(toggle(page)).toHaveAttribute('data-playing', 'true')
+    await voiceLike(page, HUM, true)
+    expect(audioRequests).toHaveLength(1)
   })
 
-  test('starts the background hum, and stops it again', async ({ page }) => {
+  test('can be switched off, which stops the hum and is remembered', async ({ page }) => {
     await soundOn(page)
     const hum = await voiceLike(page, HUM, true)
-    expect(await storedPreference(page)).toBe('on')
 
     await toggle(page).click()
     await expect(toggle(page)).toContainText('Sound: off')
+    await expect(toggle(page)).toHaveAttribute('data-playing', 'false')
     expect(await storedPreference(page)).toBe('off')
     await expect.poll(async () => (await hum()).every((v) => v.stopped)).toBe(true)
-  })
-
-  test('remembers the choice, and starts on the first gesture after a reload', async ({ page }) => {
-    await soundOn(page)
-    await voiceLike(page, HUM, true)
 
     await page.reload()
-    await expect(toggle(page)).toContainText('Sound: on')
+    await expect(toggle(page)).toContainText('Sound: off')
+    await page.keyboard.press('x')
     await pause(400)
     expect(await voices(page)).toEqual([])
+  })
 
-    await page.keyboard.press('x')
+  test('can be switched back on', async ({ page }) => {
+    await soundOff(page)
+    await page.goto('/')
+    await expect(toggle(page)).toContainText('Sound: off')
+
+    await toggle(page).click()
+    await expect(toggle(page)).toContainText('Sound: on')
     await voiceLike(page, HUM, true)
+    expect(await storedPreference(page)).toBe('on')
+  })
+})
+
+test.describe('the HUD toggle', () => {
+  test('sits to the left of the secrets counter and the clock', async ({ page }) => {
+    await page.goto('/')
+    const sound = await boxOf(toggle(page))
+    const clock = await boxOf(page.locator('#clock'))
+    const nav = await boxOf(page.locator('.hud__nav'))
+    expect(sound.x).toBeGreaterThan(nav.x + nav.width)
+    expect(sound.x + sound.width).toBeLessThan(clock.x)
+  })
+
+  test('shows the secrets counter right of the toggle once something is found', async ({
+    page,
+  }) => {
+    await page.goto('/')
+    await page.evaluate(() => window.hack())
+    const chip = page.locator('.hud__secrets')
+    await expect(chip).toBeVisible()
+    const sound = await boxOf(toggle(page))
+    const secrets = await boxOf(chip)
+    expect(sound.x + sound.width).toBeLessThan(secrets.x)
   })
 })
 
@@ -147,7 +193,10 @@ test.describe('what plays', () => {
     await expect.poll(async () => (await song()).every((v) => v.stopped)).toBe(true)
   })
 
-  test('OVERDRIVE entered before sound is switched on starts its song then', async ({ page }) => {
+  test('OVERDRIVE entered while sound is off starts its song once switched on', async ({
+    page,
+  }) => {
+    await soundOff(page)
     await page.goto('/')
     for (const key of KONAMI) await page.keyboard.press(key)
     await expect(page.locator('html')).toHaveClass(/overdrive/)
@@ -220,6 +269,7 @@ test.describe('what plays', () => {
   })
 
   test('nothing plays while sound is off', async ({ page }) => {
+    await soundOff(page)
     await page.goto('/')
     for (let i = 0; i < 5; i++) await page.locator('#clock').click()
     const { x, y } = await emptySpot(page)

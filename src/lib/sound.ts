@@ -1,4 +1,4 @@
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 import bedUrl from '@/assets/audio/bed-hum.ogg'
 import chargeFireUrl from '@/assets/audio/charge-fire.ogg'
 import chargeLoopUrl from '@/assets/audio/charge-loop.ogg'
@@ -19,9 +19,9 @@ const STORE_KEY = 'td-sound'
 
 function readPreference() {
   try {
-    return localStorage.getItem(STORE_KEY) === 'on'
+    return localStorage.getItem(STORE_KEY) !== 'off'
   } catch {
-    return false
+    return true
   }
 }
 
@@ -41,11 +41,12 @@ interface Engine {
 }
 
 let engine: Engine | undefined
-// Browsers only start audio after a gesture, so a saved "on" waits for the first one.
-let unlocked = false
+// Sound is on by default, but browsers only start audio after a gesture, so it waits for one.
+const unlocked = ref(false)
 let overdriveWanted = false
 
-const enabled = () => soundOn.value && unlocked
+const enabled = () => soundOn.value && unlocked.value
+export const soundPlaying = computed(enabled)
 
 // Nothing is created, fetched or decoded until sound has been switched on.
 function getEngine(): Engine {
@@ -144,7 +145,7 @@ function syncAll() {
 }
 
 function unlock() {
-  unlocked = true
+  unlocked.value = true
   void getEngine().ctx.resume()
   syncAll()
 }
