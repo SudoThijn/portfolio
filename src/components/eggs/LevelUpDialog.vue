@@ -1,10 +1,14 @@
 <script setup lang="ts">
 import { onMounted, useTemplateRef } from 'vue'
 import { SECRETS, levelUpOpen } from '@/eggs/secrets'
+import { playLevelUp } from '@/lib/sound'
 
 const dialog = useTemplateRef<HTMLDialogElement>('dialog')
 
-onMounted(() => dialog.value?.showModal())
+onMounted(() => {
+  dialog.value?.showModal()
+  void playLevelUp()
+})
 
 const close = () => dialog.value?.close()
 const onClosed = () => {

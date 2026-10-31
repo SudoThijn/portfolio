@@ -59,12 +59,33 @@ Facts to confirm or decide:
 The hardest part, because the right sounds are hard to find. Ground rules:
 
 - Sound is off by default, with a mute/unmute toggle in the HUD. Browsers only allow audio after a visitor interaction anyway. Remember the choice.
-- Keep sounds short and quiet, and never loop.
+- Effects stay short and quiet. Music loops are wanted for the background, OVERDRIVE (meltdown) and LEET, and they only play while sound is on.
+- Anything under CC-BY is allowed as long as it is credited, for example in a credits popup from the footer. Keep a credit line per file.
+
+Built (2026-10-31): `src/lib/sound.ts` is a Web Audio engine that is only created, fetched and decoded after sound is switched on. The HUD has a "Sound: on/off" toggle (off by default, saved in `td-sound`, and a saved "on" starts on the first gesture of the next visit). Wired so far: the quiet hum (18%), the Hard Boss Battle 1 song while OVERDRIVE is active, the charge shot (starts with the ring, fires on a full release, fizzles out on an early one), Warp Drive when LEET starts, "Arcade bonus" on the level up, and the Menu open/close sounds for the credits popup. The footer "Sound credits" button opens that popup, which CC-BY requires. Levels are constants at the top of `sound.ts`. Tested only in Chromium; Safari's support for OGG Vorbis was not checked, so check it before launch. `e2e/sound.spec.ts` records every buffer the page starts and asserts which sound plays for each event.
+
+Decisions so far (2026-10-31):
+
+- Taken: "Friendly Talk On A Robotic Battlefield (looped)" from OpenGameArt, CC0, as music.
+- Rejected: Kenney's Sci-Fi Sounds and Interface Sounds. They sound too 8-bit for the theme and many of them are horror-game material. `explosionCrunch_000` (charge shot release) and `spaceEngine_000` (meltdown) were only kept as references for what those slots should feel like; better replacements are wanted.
+- Locked in, charge shot: JC Sounds Sci-Fi Pack Vol 1 (CC-BY 4.0, credit "JC Sounds"). While the visitor holds, play "Energy BuildUp to LOOP Short Start" and schedule "Energy BuildUp LOOP" to begin exactly when it ends, on the Web Audio clock (an `onended` handoff leaves a gap). On release, start "Heavy Plasma Shot 02" immediately and fade the charge out over 0.5 s underneath it.
+- Rejected: the sounds Claude synthesised in the browser (charge sweep, power down, chime, tick, glitch, boom). Do not synthesise replacements unless asked.
+- Rejected: slowing Synthetic Whisper down with ffmpeg's rubberband filter ("awful"). Use the original.
+- Music shortlist: Friendly Talk (CC0), Synthetic Whisper (CC-BY 4.0, DavidKBD; the file ends in 0.43 s of silence, so it leaves a gap when looped), Orbital Colossus (Space Boss Battle Theme, Matthew Pablo, CC-BY 3.0, credit "Music by Matthew Pablo www.matthewpablo.com"; does not loop as released) and Hard Boss Battle 1 (CC0). Which one goes where (background, OVERDRIVE, LEET) is still open.
+- Locked in, level up: "Arcade Bonus" from the Packsmithy sampler (CC-BY 4.0, credit "Packsmithy (packsmithy.com)").
+- Locked in, OVERDRIVE: "Hard Boss Battle 1" (CC0, 80 s, loops cleanly) plays as the full song for as long as OVERDRIVE lasts. There is no separate entry or exit sound. The horror hits and stingers tried for an entry were rejected: they lack intensity and do not fit the cyberpunk vibe. "Jumpscare" in the brief meant intense cyberpunk music, not horror.
+- Locked in, under-layer: "Futuristic Machine Hum" (JC pack, CC-BY 4.0, credit "JC Sounds", loops seamlessly) at 18% volume. An under-layer is a very quiet looping room tone that sits below everything else.
+- Leaning towards, LEET entry: "WarpDrive" from the Little Robot Sound Factory Sci-Fi Sound Library (CC-BY 3.0, credit "Little Robot Sound Factory, www.littlerobotsoundfactory.com"). Three variants exist (00 is 4.4 s, 01 is 7.3 s, 02 is 4.1 s), and 00 and 01 start with 0.13 to 0.24 s of silence to trim.
+- Parked: "Menu open 1" and "Menu close 1" (UI Menu Open and Close, FiveBrosStopMosYT, CC-BY 4.0) for popups. There are none yet, and the footer credits popup would be the first.
+- Not liked: the Achievement jingle, Victory and the synth win jingles. The pack names are not descriptive, so audition by ear.
+- Level matching is needed when wiring: Friendly Talk is much louder than Hard Boss Battle 1 (RMS 0.50 against 0.28), and Friendly Talk's loop wrap is a slightly bigger jump than its normal steps.
+- Still open: which of Friendly Talk, Synthetic Whisper and Orbital Colossus is the background music and which (if any) is for LEET, and all UI, toast and terminal sounds. Nothing heard so far was liked for the UI sounds.
+- OVERDRIVE has no timer and lasts until the visitor exits, so its music has to loop or end gracefully. LEET lasts 13.37 s, so it only needs a cue of that length.
 
 Where sounds can come from:
 
-- Synthesised in the browser with the Web Audio API, sfxr/jsfxr style. No licensing, tiny, and easy to tweak towards the retro-arcade feel.
-- CC0 sound packs, such as Kenney's UI and sci-fi audio packs or CC0 sounds on Freesound. Check every licence; avoid anything that needs attribution unless it gets credited.
+- Synthesised in the browser with the Web Audio API. No licensing, tiny, and the length can follow the visitor, which suits the charge shot.
+- CC0 or CC-BY sound from OpenGameArt, whose pages can be downloaded with `curl` (the Freesound downloads need a login). Check every licence on its own page.
 
 Suggested approach: build a small "sound board" page that plays candidate sounds for every event side by side, pick them together, then wire up the winners.
 

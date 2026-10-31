@@ -9,9 +9,11 @@ import QuestsSection from './components/QuestsSection.vue'
 import SiteFooter from './components/SiteFooter.vue'
 import TargetReticle from './components/TargetReticle.vue'
 import EggOverlays from './components/eggs/EggOverlays.vue'
+import CreditsDialog from './components/eggs/CreditsDialog.vue'
 import LevelUpDialog from './components/eggs/LevelUpDialog.vue'
 import TerminalDialog from './components/eggs/TerminalDialog.vue'
 import { levelUpOpen } from './eggs/secrets'
+import { creditsOpen } from './lib/credits'
 </script>
 
 <template>
@@ -34,4 +36,5 @@ import { levelUpOpen } from './eggs/secrets'
   <EggOverlays />
   <TerminalDialog />
   <LevelUpDialog v-if="levelUpOpen" />
+  <CreditsDialog v-if="creditsOpen" />
 </template>

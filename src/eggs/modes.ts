@@ -2,6 +2,7 @@ import { ref } from 'vue'
 import { finePointer, minuteFormat, reduceMotion } from '@/lib/env'
 import { field } from '@/lib/field'
 import { scramble } from '@/lib/scramble'
+import { overdriveMusic, playWarp } from '@/lib/sound'
 import { unlock } from './secrets'
 
 const root = document.documentElement
@@ -44,6 +45,7 @@ export function setOverdrive(on: boolean) {
   overdrive.value = on
   root.classList.toggle('overdrive', on)
   field.setMode(on ? 'overdrive' : 'normal')
+  overdriveMusic(on)
   if (statusLabel) {
     statusLabel.textContent = on
       ? `Overdrive active${finePointer ? ' · Esc to exit' : ''}`
@@ -156,6 +158,7 @@ export function enterLeet() {
     setTimeout(() => root.classList.remove('leet-glitch'), 500)
   }
   field.setMode('leet')
+  void playWarp()
   unlock('leet')
   leetTimer = window.setTimeout(exitLeet, LEET_MS)
 }

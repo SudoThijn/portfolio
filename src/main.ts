@@ -4,6 +4,7 @@ import './assets/style.css'
 import { initEggs } from './eggs'
 import { trackPointer } from './lib/env'
 import { initReveal } from './lib/reveal'
+import { initSound } from './lib/sound'
 
 document.documentElement.classList.add('js')
 trackPointer()
@@ -13,3 +14,4 @@ createApp(App).mount('#app')
 // These look up elements by selector, so they run once the app has rendered.
 initReveal()
 initEggs()
+initSound()
