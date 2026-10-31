@@ -89,8 +89,10 @@ export function mountField(canvas: HTMLCanvasElement): () => void {
 
   function resize() {
     const dpr = Math.min(devicePixelRatio || 1, 2)
-    width = innerWidth
-    height = innerHeight
+    // The displayed size, which leaves out a page scrollbar that innerWidth includes. A buffer of
+    // another size would be squeezed, and the dots would drift away from the cursor.
+    width = canvas.clientWidth
+    height = canvas.clientHeight
     canvas.width = width * dpr
     canvas.height = height * dpr
     ctx!.setTransform(dpr, 0, 0, dpr, 0, 0)
@@ -208,8 +210,10 @@ export function mountField(canvas: HTMLCanvasElement): () => void {
     },
   }
 
+  const observer = new ResizeObserver(onResize)
   resize()
   addEventListener('resize', onResize)
+  observer.observe(canvas)
   if (reduceMotion) {
     draw(0)
   } else {
@@ -219,6 +223,7 @@ export function mountField(canvas: HTMLCanvasElement): () => void {
 
   return () => {
     cancelAnimationFrame(frame)
+    observer.disconnect()
     removeEventListener('resize', onResize)
     document.removeEventListener('visibilitychange', onVisibility)
     active = null
