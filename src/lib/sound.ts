@@ -243,15 +243,50 @@ export function startCharge(): Charge {
   }
 }
 
+type AutoplayNavigator = Navigator & { getAutoplayPolicy?: (type: 'audiocontext') => string }
+
+// Autoplay is sometimes allowed, for a visitor who has engaged with the site before or who allowed
+// its sound, and then there is nothing to wait for.
+function startIfAutoplayAllowed() {
+  const policy = (navigator as AutoplayNavigator).getAutoplayPolicy?.('audiocontext')
+  if (policy) {
+    if (policy === 'allowed') unlock()
+    return
+  }
+  // Where the browser cannot say, a context that starts running by itself shows it is allowed.
+  // It begins suspended and turns running a moment later, so this watches for the change.
+  const { ctx } = getEngine()
+  const check = () => {
+    if (!unlocked.value && ctx.state === 'running') unlock()
+  }
+  ctx.addEventListener('statechange', check)
+  check()
+}
+
+const GESTURES = ['pointerdown', 'pointerup', 'keydown', 'touchend'] as const
+
+// Starts on the first interaction the browser accepts. A touch pointerdown and the Escape key are
+// not accepted, so the listeners stay until the context really runs.
+function waitForGesture() {
+  const arm = (event: Event) => {
+    if (event.type === 'pointerdown' && (event as PointerEvent).pointerType !== 'mouse') return
+    if (event.type === 'keydown' && (event as KeyboardEvent).key === 'Escape') return
+    unlock()
+    void getEngine()
+      .ctx.resume()
+      .then(() => {
+        if (getEngine().ctx.state === 'running') {
+          for (const type of GESTURES) removeEventListener(type, arm)
+        }
+      })
+  }
+  for (const type of GESTURES) addEventListener(type, arm)
+}
+
 export function initSound() {
   if (soundOn.value) {
-    const arm = () => {
-      removeEventListener('pointerup', arm)
-      removeEventListener('keydown', arm)
-      unlock()
-    }
-    addEventListener('pointerup', arm)
-    addEventListener('keydown', arm)
+    waitForGesture()
+    startIfAutoplayAllowed()
   }
   document.addEventListener('visibilitychange', () => {
     if (!engine) return

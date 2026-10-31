@@ -11,6 +11,7 @@ declare global {
   interface Window {
     __voices: Voice[]
     __lastKey: number
+    __allowAutoplay?: boolean
     hack(): string
   }
 }
@@ -66,6 +67,45 @@ test.beforeEach(async ({ page }) => {
       if (voice) voice.stopped = true
       return stop.apply(this, args)
     }
+  })
+
+  // Headless Chromium plays without a gesture, unlike a visitor's browser. This makes a new
+  // AudioContext act autoplay-blocked until the first interaction a browser accepts, unless a test
+  // opts out to stand in for a browser that allows autoplay.
+  await page.addInitScript(() => {
+    let interacted = false
+    const accepted = (event: Event) => {
+      if (event.type === 'pointerdown' && (event as PointerEvent).pointerType !== 'mouse') return
+      if (event.type === 'keydown' && (event as KeyboardEvent).key === 'Escape') return
+      interacted = true
+    }
+    for (const type of ['pointerdown', 'pointerup', 'keydown', 'touchend']) {
+      addEventListener(type, accepted, true)
+    }
+    const Real = window.AudioContext
+    class Gated extends Real {
+      constructor(options?: AudioContextOptions) {
+        super(options)
+        // A browser that allows autoplay starts the context shortly after it is created.
+        let allowed = false
+        if (window.__allowAutoplay) {
+          setTimeout(() => {
+            allowed = true
+            this.dispatchEvent(new Event('statechange'))
+          }, 100)
+        }
+        Object.defineProperty(this, 'state', {
+          get: () => (allowed || interacted ? 'running' : 'suspended'),
+        })
+        Object.defineProperty(this, 'resume', {
+          value: () => {
+            if (interacted) return Real.prototype.resume.call(this)
+            return allowed ? Promise.resolve() : new Promise<void>(() => {})
+          },
+        })
+      }
+    }
+    window.AudioContext = Gated
   })
 })
 
@@ -137,6 +177,34 @@ test.describe('switching sound on and off', () => {
     expect(audioRequests.some((url) => url.includes('bed-hum'))).toBe(true)
     // The big OVERDRIVE song is fetched in the background, so the egg can start it instantly.
     await expect.poll(() => audioRequests.some((url) => url.includes('overdrive-music'))).toBe(true)
+  })
+
+  test('starts by itself when the browser allows autoplay', async ({ page }) => {
+    await page.addInitScript(() => {
+      window.__allowAutoplay = true
+    })
+    await page.goto('/')
+    await expect(toggle(page)).toHaveAttribute('data-playing', 'true')
+    await voiceLike(page, HUM, true)
+  })
+
+  test('starts on a mouse press, without waiting for the click to finish', async ({ page }) => {
+    await page.goto('/')
+    await expect(toggle(page)).toHaveAttribute('data-playing', 'false')
+    const { x, y } = await emptySpot(page)
+    await page.mouse.move(x, y)
+    await page.mouse.down()
+    await voiceLike(page, HUM, true)
+    await page.mouse.up()
+  })
+
+  test('ignores Escape, which browsers do not count, until a real gesture', async ({ page }) => {
+    await page.goto('/')
+    await page.keyboard.press('Escape')
+    await pause(300)
+    expect(await voices(page)).toEqual([])
+    await page.keyboard.press('x')
+    await voiceLike(page, HUM, true)
   })
 
   test('can be switched off, which stops the hum and is remembered', async ({ page }) => {
