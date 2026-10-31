@@ -9,6 +9,29 @@ test.beforeEach(async ({ page }) => {
 const scrollToSection = (page: Page, id: string) =>
   page.evaluate((target) => document.getElementById(target)?.scrollIntoView(), id)
 
+test.describe('builds', () => {
+  test('features the Keepiq extension as a work in progress', async ({ page }) => {
+    const feature = page.locator('#builds .feature')
+    await expect(feature.locator('.feature__title')).toHaveText('Keepiq browser extension')
+    await expect(feature.locator('.block', { hasText: 'WIP' })).toBeVisible()
+    await expect(feature.locator('.feature__facts')).toContainText('Lead frontend developer')
+
+    const code = feature.getByRole('link', { name: 'View the code' })
+    await expect(code).toHaveAttribute(
+      'href',
+      'https://github.com/ConductionNL/keepiq/tree/development/browser-extension',
+    )
+    await expect(code).toHaveAttribute('target', '_blank')
+  })
+
+  test('links only to the SudoThijn profile', async ({ page }) => {
+    const links = await page
+      .locator('#builds .repo')
+      .evaluateAll((els) => els.map((el) => el.getAttribute('href')))
+    expect(links).toEqual(['https://github.com/SudoThijn'])
+  })
+})
+
 test.describe('password lab', () => {
   test('rates what you type and shows the numbers', async ({ page }) => {
     const lab = page.locator('#lab')

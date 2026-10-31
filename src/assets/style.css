@@ -749,6 +749,7 @@ html.js .panel-block:not(.in) .segs i.on { opacity: 0; transform: skewX(var(--sk
   padding: clamp(24px, 4vw, 48px);
 }
 .feature__info { display: grid; gap: 20px; align-content: start; justify-items: start; }
+.feature__tags { display: flex; flex-wrap: wrap; gap: 10px; }
 .feature__title { font: 900 clamp(1.8rem, 3.6vw, 2.8rem)/1 var(--font-display); font-stretch: 85%; text-transform: uppercase; text-wrap: balance; }
 .feature__info > p { max-width: 54ch; }
 .feature__facts { width: 100%; }
@@ -810,7 +811,7 @@ html.js .panel-block:not(.in) .segs i.on { opacity: 0; transform: skewX(var(--sk
 .lab__stats dt { color: var(--dim); font-size: .66rem; }
 .lab__stats dd { color: var(--text); font-size: .95rem; font-variant-numeric: tabular-nums; margin-top: 2px; }
 
-.repos { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; margin-top: 24px; }
+.repos { display: grid; grid-template-columns: minmax(0, 1fr); gap: 24px; margin-top: 24px; }
 .repo {
   display: grid;
   gap: 10px;

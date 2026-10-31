@@ -44,8 +44,8 @@ function rescramble() {
           <span class="hero__kana-inline" aria-hidden="true">フロントエンド開発者</span>
         </div>
         <p class="hero__lede" data-intro="3">
-          I build interfaces in Vue and React, and I led a password manager browser extension from
-          first idea to working product.
+          I build interfaces in Vue and React, and I lead the frontend of a password manager browser
+          extension.
         </p>
         <div class="hero__actions" data-intro="4">
           <a class="btn btn--primary" href="#contact"><span>Get in touch</span></a>

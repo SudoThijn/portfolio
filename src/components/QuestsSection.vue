@@ -12,7 +12,7 @@ const quests = [
     where: 'Conduction B.V.',
     objectives: [
       'Built user interfaces with Vue and React as an experienced developer in the team.',
-      'Led the development of a password manager browser extension, where security and usability meet.',
+      'Lead the frontend of a password manager browser extension, where security and usability meet.',
       'Learned to use AI tools effectively in day-to-day development.',
     ],
   },

@@ -39,7 +39,7 @@ Work items:
 
 Claude wrote some of the copy, so all of it needs a read, starting with:
 
-- Bio wording, the password manager description ("a vault that stays locked down, in a tool people are happy to use every day"), the role line "Lead developer" and the scope line "Idea → product".
+- Bio wording. The Keepiq description in Builds is now taken from the extension README, with the role "Lead frontend developer" and status "Work in progress". The hero, quest log and Browser extensions stat say the same.
 - Stat hover texts ("Eight-plus years of it…", "Production interfaces at Conduction…", "The basics from MBO: PHP and databases").
 - How the HBO year is framed in the quest log ("Found out that I do my best work by building, not by studying theory").
 - Footer line "Hand-built in Dronten, no templates".
@@ -51,7 +51,7 @@ Facts to confirm or decide:
 - LV.23 is the current age. It could be calculated from the birth date, so it ticks up to LV.24 on 7 October 2027 by itself.
 - Dronten coordinates in the hero (52.52°N 5.72°E).
 - A photo, or an avatar replacing the TD emblem.
-- More projects in the Builds section: right now it shows the private password manager plus one public repo (`extension-template`).
+- Builds shows the Keepiq extension plus the SudoThijn profile card, and that is deliberate: repos from the RalkeyOfficial account stay off the site so the two identities are not linked. More projects can come once they live under SudoThijn.
 - Phone number and birth date stay off the public site unless decided otherwise.
 
 ## 4. Sound effects

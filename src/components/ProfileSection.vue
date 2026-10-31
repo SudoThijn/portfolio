@@ -23,7 +23,7 @@ const stats = [
     name: 'Browser extensions',
     rank: 'Experienced',
     level: 8,
-    info: 'Led a password manager extension from first idea to working product.',
+    info: 'Lead frontend developer on a password manager extension.',
   },
   {
     name: 'PHP / backend',
