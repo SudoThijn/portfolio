@@ -1,0 +1,73 @@
+<script setup lang="ts">
+import { bursts, ring } from '@/eggs/charge'
+import { cutinPlaying, cutinRun, overdrive, setOverdrive } from '@/eggs/modes'
+import { saveBox } from '@/eggs/savepoint'
+import { SECRETS, toasts } from '@/eggs/secrets'
+import { finePointer } from '@/lib/env'
+
+// Only mention the Esc key where there is likely a keyboard.
+const escHint = finePointer ? ' · Esc' : ''
+</script>
+
+<template>
+  <div class="toasts" role="status" aria-live="polite">
+    <div v-for="toast in toasts" :key="toast.key" class="toast" :class="{ 'is-out': toast.out }">
+      <span class="toast__kicker">◆ Achievement unlocked</span>
+      <span class="toast__title">{{ toast.secret.title }}</span>
+      <span class="toast__text">{{ toast.secret.text }}</span>
+      <span class="toast__count">{{ toast.count }}/{{ SECRETS.length }}</span>
+    </div>
+  </div>
+
+  <!-- A new key remounts the band, which restarts its animation. -->
+  <div class="cutin" :key="cutinRun" :class="{ 'is-playing': cutinPlaying }" aria-hidden="true">
+    <div class="cutin__flash"></div>
+    <div class="cutin__band">
+      <div class="cutin__lines"></div>
+      <div class="cutin__content">
+        <span class="cutin__kana">オーバードライブ</span>
+        <span class="cutin__title">Overdrive</span>
+        <span class="cutin__sub">Limit break // all stats maxed</span>
+      </div>
+    </div>
+  </div>
+
+  <button
+    class="btn btn--small btn--primary od-exit"
+    type="button"
+    :hidden="!overdrive"
+    @click="setOverdrive(false)"
+  >
+    <span>Exit overdrive{{ escHint }}</span>
+  </button>
+
+  <div
+    class="charge"
+    aria-hidden="true"
+    :class="{ 'is-on': ring.on, 'is-full': ring.full }"
+    :style="{ left: `${ring.x}px`, top: `${ring.y}px`, '--charge': ring.level }"
+  ></div>
+  <div
+    v-for="burst in bursts"
+    :key="burst.key"
+    class="burst"
+    :style="{ left: `${burst.x}px`, top: `${burst.y}px` }"
+  ></div>
+
+  <div
+    v-if="saveBox"
+    :key="saveBox.key"
+    class="savepoint"
+    role="status"
+    :class="{ 'is-out': saveBox.out }"
+  >
+    <span class="savepoint__crystal" aria-hidden="true"></span>
+    <span class="savepoint__body">
+      <span class="savepoint__text">
+        <b v-if="saveBox.saved">Game saved.</b>
+        <template v-else>Saving… don't turn off the power</template>
+      </span>
+      <span class="savepoint__meta">{{ saveBox.meta }}</span>
+    </span>
+  </div>
+</template>
