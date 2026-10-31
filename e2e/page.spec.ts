@@ -121,6 +121,101 @@ test.describe('copy email', () => {
   })
 })
 
+test.describe('hero ticker', () => {
+  // The bands are tilted, so their ends hang below and above their middle on wide screens.
+  for (const width of [390, 1280, 1958, 2545, 3440]) {
+    test(`fits inside the hero and clear of its content at ${width}px wide`, async ({ page }) => {
+      await page.setViewportSize({ width, height: width > 1000 ? 980 : 844 })
+      await page.evaluate(() =>
+        Promise.all(
+          document
+            .querySelector('.ticker')
+            ?.getAnimations()
+            .map((a) => a.finished) ?? [],
+        ),
+      )
+      const fit = await page.evaluate(() => {
+        const shadow = 6
+        const hero = document.querySelector('.hero')?.getBoundingClientRect()
+        const content = document.querySelector('.hero__inner')?.getBoundingClientRect()
+        const bands = [...document.querySelectorAll('.ticker__band')].map((b) =>
+          b.getBoundingClientRect(),
+        )
+        return {
+          below: (hero?.bottom ?? 0) - (Math.max(...bands.map((b) => b.bottom)) + shadow),
+          above: Math.min(...bands.map((b) => b.top)) - (content?.bottom ?? 0),
+        }
+      })
+      expect(fit.below).toBeGreaterThanOrEqual(0)
+      expect(fit.above).toBeGreaterThanOrEqual(0)
+    })
+  }
+})
+
+test.describe('selecting text', () => {
+  const selectFromNameToQuests = (page: Page) =>
+    page.evaluate(() => {
+      const from = document.querySelector('.hero__line')?.firstChild
+      const to = document.querySelector('#quests .sec-head__title')?.firstChild
+      if (from && to) getSelection()?.setBaseAndExtent(from, 1, to, 4)
+      return getSelection()?.toString() ?? ''
+    })
+
+  test('a selection across the page leaves out the decorative text', async ({ page }) => {
+    const text = await selectFromNameToQuests(page)
+    expect(text).toContain('I build interfaces')
+    expect(text).toMatch(/coding xp/i)
+    for (const decorative of [/テイン/, /フロントエンド開発者/, /sudothijn/i, /sync 100%/i]) {
+      expect(text).not.toMatch(decorative)
+    }
+    expect(text).not.toMatch(/LV\.?\s*23/i)
+  })
+
+  test('the decorative Japanese text is generated content, not text', async ({ page }) => {
+    for (const selector of [
+      '.hero__kana',
+      '.hero__kana-inline',
+      '.sec-head__kana',
+      '.idcard__kana',
+    ]) {
+      const kana = page.locator(selector).first()
+      await expect(kana).toHaveText('')
+      expect(await kana.evaluate((el) => getComputedStyle(el, '::before').content)).toMatch(
+        /[぀-ヿ]/,
+      )
+    }
+  })
+
+  test('text that cannot be selected keeps its own colour under a selection', async ({ page }) => {
+    await selectFromNameToQuests(page)
+    const colours = await page.evaluate(() => {
+      const read = (selector: string) => {
+        const el = document.querySelector(selector)
+        if (!el) throw new Error(`missing ${selector}`)
+        return {
+          own: getComputedStyle(el).color,
+          selected: getComputedStyle(el, '::selection').color,
+          ownFill: getComputedStyle(el).fill,
+          selectedFill: getComputedStyle(el, '::selection').fill,
+          background: getComputedStyle(el, '::selection').backgroundColor,
+        }
+      }
+      return {
+        emblem: read('.emblem__mono'),
+        ticker: read('.ticker__band'),
+        prose: read('.hero__lede'),
+      }
+    })
+    for (const unselectable of [colours.emblem, colours.ticker]) {
+      expect(unselectable.selected).toBe(unselectable.own)
+      expect(unselectable.background).toBe('rgba(0, 0, 0, 0)')
+    }
+    // SVG text is painted with its fill when selected, not its colour.
+    expect(colours.emblem.selectedFill).toBe(colours.emblem.ownFill)
+    expect(colours.prose.selected).not.toBe(colours.prose.own)
+  })
+})
+
 test.describe('ticker', () => {
   test('repeats its text to cover the band twice over', async ({ page }) => {
     for (const track of await page.locator('.ticker__track').all()) {

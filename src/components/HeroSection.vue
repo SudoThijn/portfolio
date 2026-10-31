@@ -41,7 +41,7 @@ function rescramble() {
         <div class="hero__tags" data-intro="2">
           <span class="block block--yellow"><span>Frontend developer</span></span>
           <span class="block block--magenta"><span>LV.23</span></span>
-          <span class="hero__kana-inline" aria-hidden="true">フロントエンド開発者</span>
+          <span class="hero__kana-inline" aria-hidden="true" data-kana="フロントエンド開発者"></span>
         </div>
         <p class="hero__lede" data-intro="3">
           I build interfaces in Vue and React, and I lead the frontend of a password manager browser
@@ -123,7 +123,7 @@ function rescramble() {
           <span class="emblem__label emblem__label--b mono">Vue / React</span>
           <span class="emblem__label emblem__label--c mono">Ext. build</span>
         </div>
-        <span class="hero__kana">テイン・ダウマ</span>
+        <span class="hero__kana" data-kana="テイン・ダウマ"></span>
       </div>
     </div>
 

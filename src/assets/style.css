@@ -56,24 +56,53 @@ body {
 
 [hidden] { display: none !important; }
 
-/* Interface chrome and click targets: repeated clicks (like five on the clock) shouldn't select text. */
-.hud,
-.btn,
-.block,
-.ticker,
-.hero__emblem,
-.hero__kana-inline,
-.sec-head__tag,
-.sec-head__kana,
-.stat,
-.idcard__strip,
-.toasts,
-.savepoint,
-.term__bar,
-.lab__head,
-.meter {
+/* The decorative Japanese text is generated content, which a selection can neither select nor recolour. */
+.hero__kana::before,
+.hero__kana-inline::before,
+.sec-head__kana::before,
+.idcard__kana::before { content: attr(data-kana); }
+
+/* Interface chrome and decoration: repeated clicks (like five on the clock) shouldn't select text, and a drag across it shouldn't either.
+   A selection still recolours the text it sweeps over, even when it can't select it, so these keep their own colour.
+   SVG text takes its selected colour from fill, not color, so both are set. */
+@property --own-color {
+  syntax: "<color>";
+  inherits: false;
+  initial-value: transparent;
+}
+:is(
+  .hud,
+  .btn,
+  .block,
+  .ticker,
+  .hero__emblem,
+  .hero__kana,
+  .hero__kana-inline,
+  .sec-head__tag,
+  .sec-head__kana,
+  .stat,
+  .idcard__strip,
+  .idcard__kana,
+  .level,
+  .toasts,
+  .savepoint,
+  .term__bar,
+  .lab__head,
+  .meter,
+  [aria-hidden="true"]
+) {
   -webkit-user-select: none;
   user-select: none;
+
+  &,
+  & * { --own-color: currentcolor; }
+
+  &::selection,
+  & *::selection {
+    background: transparent;
+    color: var(--own-color);
+    fill: var(--own-color);
+  }
 }
 
 a { color: inherit; }
@@ -368,7 +397,7 @@ body::before {
   justify-content: center;
   min-height: min(100svh, 980px);
   padding-top: calc(var(--hud-h) + 56px);
-  padding-bottom: 150px;
+  padding-bottom: max(150px, calc(4.4vw + 80px));
   overflow: hidden;
 }
 
@@ -413,7 +442,7 @@ body::before {
 }
 .hero__name:hover .hero__line--outline { background-position: left; }
 
-.hero__tags { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; font-size: clamp(.95rem, 1.6vw, 1.2rem); }
+.hero__tags { position: relative; display: flex; flex-wrap: wrap; align-items: center; gap: 12px; font-size: clamp(.95rem, 1.6vw, 1.2rem); }
 .hero__kana-inline { font-family: var(--font-jp); font-weight: 700; color: var(--dim); font-size: .85em; letter-spacing: .12em; margin-left: 6px; }
 
 .hero__lede { max-width: 34ch; font-size: clamp(1.1rem, 1.7vw, 1.35rem); line-height: 1.5; color: var(--text); text-wrap: pretty; }
@@ -446,8 +475,8 @@ body::before {
 .emblem .spin--rev { animation-duration: 18s; animation-direction: reverse; }
 @keyframes spin { to { transform: rotate(360deg); } }
 .emblem__hex { filter: drop-shadow(0 0 8px var(--yellow)); }
-.emblem__mono { font: 900 92px var(--font-display); font-stretch: 80%; fill: var(--text); font-style: normal; }
-.emblem__sub { font: 600 13px var(--font-mono); letter-spacing: .3em; fill: var(--cyan); }
+.emblem__mono { font: 900 92px var(--font-display); font-stretch: 80%; color: var(--text); fill: currentcolor; font-style: normal; }
+.emblem__sub { font: 600 13px var(--font-mono); letter-spacing: .3em; color: var(--cyan); fill: currentcolor; }
 
 .emblem__label {
   position: absolute;
@@ -474,7 +503,6 @@ body::before {
   letter-spacing: .1em;
   color: transparent;
   -webkit-text-stroke: 1px var(--line-bright);
-  user-select: none;
 }
 
 /* Two crossing bands, the classic anime title-card move. */
@@ -482,7 +510,8 @@ body::before {
   position: absolute;
   left: -5%;
   right: -5%;
-  bottom: 46px;
+  /* The tilted band's low end hangs about 2.1vw below its middle, plus its 6px shadow. */
+  bottom: max(46px, calc(2.2vw + 6px));
   pointer-events: none;
 }
 .ticker__band {
@@ -566,7 +595,6 @@ body::before {
   white-space: nowrap;
   color: transparent;
   -webkit-text-stroke: 1px var(--line);
-  user-select: none;
 }
 
 .mini { color: var(--dim); margin-bottom: 18px; display: flex; align-items: center; gap: 12px; }

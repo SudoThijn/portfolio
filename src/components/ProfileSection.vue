@@ -73,7 +73,7 @@ const info = computed(() => {
             <div class="idcard__who">
               <p class="idcard__name">Thijn Douwma</p>
               <p class="idcard__class">Frontend developer</p>
-              <p class="idcard__kana" aria-hidden="true">フロントエンド開発者</p>
+              <p class="idcard__kana" aria-hidden="true" data-kana="フロントエンド開発者"></p>
             </div>
           </div>
 
