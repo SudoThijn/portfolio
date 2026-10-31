@@ -66,6 +66,8 @@ function enterOverdrive() {
     unlock('overdrive')
     return
   }
+  // The song starts with the code, while the palette swap below waits for the band.
+  overdriveMusic(true)
   cutinRun.value++
   cutinPlaying.value = true
   root.classList.add('od-shake')

@@ -13,6 +13,8 @@ import warpUrl from '@/assets/audio/warp.ogg'
 const MASTER = 0.6
 const BED = 0.18
 const FADE = 0.4
+// Just long enough to avoid a click, so the song is at full volume the moment it starts.
+const MUSIC_FADE_IN = 0.05
 const CHARGE_OVERLAP = 0.5
 const CHARGE_FIZZLE = 0.15
 const STORE_KEY = 'td-sound'
@@ -105,7 +107,7 @@ function fadeOut(gain: GainNode, sources: AudioBufferSourceNode[], seconds: numb
 }
 
 // A looping sound that follows a condition: it fades in when wanted and out when not.
-function createLoop(url: string, level: number, wanted: () => boolean) {
+function createLoop(url: string, level: number, wanted: () => boolean, fadeIn = FADE) {
   let running: { gain: GainNode; source: AudioBufferSourceNode } | undefined
   let loading = false
 
@@ -131,13 +133,21 @@ function createLoop(url: string, level: number, wanted: () => boolean) {
     const { ctx } = getEngine()
     const gain = gainInto(0)
     gain.gain.setValueAtTime(0, ctx.currentTime)
-    gain.gain.linearRampToValueAtTime(level, ctx.currentTime + FADE)
+    gain.gain.linearRampToValueAtTime(level, ctx.currentTime + fadeIn)
     running = { gain, source: play(buffer, gain, ctx.currentTime, true) }
   }
 }
 
 const syncBed = createLoop(bedUrl, BED, enabled)
-const syncMusic = createLoop(overdriveUrl, 1, () => enabled() && overdriveWanted)
+const syncMusic = createLoop(overdriveUrl, 1, () => enabled() && overdriveWanted, MUSIC_FADE_IN)
+
+// The song is large, so it is fetched and decoded once the page is idle. That way OVERDRIVE can
+// start it the instant it is asked for, instead of waiting for the download.
+function preloadSong() {
+  const fetchSong = () => void load(overdriveUrl).catch(() => {})
+  if ('requestIdleCallback' in window) requestIdleCallback(fetchSong, { timeout: 3000 })
+  else setTimeout(fetchSong, 2000)
+}
 
 function syncAll() {
   void syncBed()
@@ -148,6 +158,7 @@ function unlock() {
   unlocked.value = true
   void getEngine().ctx.resume()
   syncAll()
+  preloadSong()
 }
 
 export function toggleSound() {

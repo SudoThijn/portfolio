@@ -4,11 +4,13 @@ interface Voice {
   duration: number
   loop: boolean
   stopped: boolean
+  startedAt: number
 }
 
 declare global {
   interface Window {
     __voices: Voice[]
+    __lastKey: number
     hack(): string
   }
 }
@@ -49,7 +51,12 @@ test.beforeEach(async ({ page }) => {
     const start = AudioBufferSourceNode.prototype.start
     const stop = AudioBufferSourceNode.prototype.stop
     AudioBufferSourceNode.prototype.start = function (...args) {
-      const voice = { duration: this.buffer?.duration ?? 0, loop: this.loop, stopped: false }
+      const voice = {
+        duration: this.buffer?.duration ?? 0,
+        loop: this.loop,
+        stopped: false,
+        startedAt: performance.now(),
+      }
       window.__voices.push(voice)
       entries.set(this, voice)
       return start.apply(this, args)
@@ -127,7 +134,9 @@ test.describe('switching sound on and off', () => {
     await page.keyboard.press('x')
     await expect(toggle(page)).toHaveAttribute('data-playing', 'true')
     await voiceLike(page, HUM, true)
-    expect(audioRequests).toHaveLength(1)
+    expect(audioRequests.some((url) => url.includes('bed-hum'))).toBe(true)
+    // The big OVERDRIVE song is fetched in the background, so the egg can start it instantly.
+    await expect.poll(() => audioRequests.some((url) => url.includes('overdrive-music'))).toBe(true)
   })
 
   test('can be switched off, which stops the hum and is remembered', async ({ page }) => {
@@ -179,6 +188,36 @@ test.describe('the HUD toggle', () => {
     const sound = await boxOf(toggle(page))
     const secrets = await boxOf(chip)
     expect(sound.x + sound.width).toBeLessThan(secrets.x)
+  })
+})
+
+test.describe('OVERDRIVE timing', () => {
+  // The cut-in animation only runs with motion, and it is what used to hold the song back.
+  test.use({ reducedMotion: 'no-preference' })
+
+  test('the song starts with the code, not after the cut-in', async ({ page }) => {
+    await soundOn(page)
+    await expect
+      .poll(async () => page.evaluate(() => performance.getEntriesByType('resource').length))
+      .toBeGreaterThan(0)
+    // Gives the background preload of the song time to finish.
+    await pause(1000)
+    await page.evaluate(() => {
+      addEventListener(
+        'keydown',
+        (e) => e.key === 'a' && (window.__lastKey = performance.now()),
+        true,
+      )
+    })
+    for (const key of KONAMI) await page.keyboard.press(key)
+    await voiceLike(page, OVERDRIVE_SONG, true)
+
+    const delay = await page.evaluate(() => {
+      const song = window.__voices.find((v) => Math.abs(v.duration - 80.1) < 0.01)
+      return (song?.startedAt ?? Infinity) - window.__lastKey
+    })
+    // The palette swap still waits 520ms for the band, but the song must not.
+    expect(delay).toBeLessThan(200)
   })
 })
 
