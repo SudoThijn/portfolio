@@ -470,9 +470,7 @@ body::before {
   transform-style: preserve-3d;
 }
 .emblem svg { width: 100%; height: 100%; overflow: visible; }
-.emblem .spin { transform-box: view-box; transform-origin: 200px 200px; animation: spin 24s linear infinite; }
-.emblem .spin--slow { animation-duration: 60s; }
-.emblem .spin--rev { animation-duration: 18s; animation-direction: reverse; }
+.emblem .spin { transform-box: view-box; transform-origin: 200px 200px; }
 @keyframes spin { to { transform: rotate(360deg); } }
 .emblem__hex { filter: drop-shadow(0 0 8px var(--yellow)); }
 .emblem__mono { font: 900 92px var(--font-display); font-stretch: 80%; color: var(--text); fill: currentcolor; font-style: normal; }
@@ -1254,7 +1252,6 @@ html.overdrive .hero__line--outline { text-shadow: none; }
 html.overdrive .segs i { background: var(--yellow); box-shadow: 0 0 8px var(--yellow); }
 html.overdrive .stat__rank { font-size: 0; }
 html.overdrive .stat__rank::after { content: "Limit break"; font-size: .7rem; color: var(--yellow); }
-html.overdrive .emblem .spin { animation-duration: 4s; }
 html.overdrive .ticker__track { animation-duration: 9s; }
 html.overdrive .scanlines {
   background:

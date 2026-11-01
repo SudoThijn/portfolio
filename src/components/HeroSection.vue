@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import { onBeforeUnmount, onMounted, useTemplateRef } from 'vue'
+import { overdrive } from '@/eggs/modes'
+import { mountEmblemSpin } from '@/lib/emblemSpin'
 import { finePointer, reduceMotion } from '@/lib/env'
 import { scramble } from '@/lib/scramble'
 import TickerBand from './TickerBand.vue'
@@ -16,11 +18,18 @@ const onTilt = (e: PointerEvent) => {
   emblem.value?.style.setProperty('--rx', `${ny * -22}deg`)
 }
 
+let stopSpin = () => {}
+
 onMounted(() => {
   nameLines().forEach((el, i) => setTimeout(() => scramble(el, 700 + i * 250), 150 + i * 120))
   if (finePointer && !reduceMotion) addEventListener('pointermove', onTilt, { passive: true })
+  const rings = [...(emblem.value?.querySelectorAll<SVGGElement>('.spin') ?? [])]
+  stopSpin = mountEmblemSpin(rings, () => overdrive.value)
 })
-onBeforeUnmount(() => removeEventListener('pointermove', onTilt))
+onBeforeUnmount(() => {
+  removeEventListener('pointermove', onTilt)
+  stopSpin()
+})
 
 function rescramble() {
   nameLines().forEach((el, i) => scramble(el, 450 + i * 150))
@@ -59,7 +68,7 @@ function rescramble() {
       <div class="hero__emblem" aria-hidden="true">
         <div class="emblem" id="emblem" ref="emblem">
           <svg viewBox="0 0 400 400">
-            <g class="spin spin--slow">
+            <g class="spin" data-period="60">
               <circle
                 cx="200"
                 cy="200"
@@ -71,7 +80,7 @@ function rescramble() {
                 opacity=".7"
               />
             </g>
-            <g class="spin spin--rev">
+            <g class="spin" data-period="-18">
               <circle
                 cx="200"
                 cy="200"
@@ -83,7 +92,7 @@ function rescramble() {
                 stroke-linecap="butt"
               />
             </g>
-            <g class="spin">
+            <g class="spin" data-period="24">
               <circle
                 cx="200"
                 cy="200"
