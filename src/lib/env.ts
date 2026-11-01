@@ -1,4 +1,5 @@
 import { LOCALES, locale, type Locale } from '@/i18n'
+import { ageOn } from './age'
 
 export const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches
 export const finePointer = matchMedia('(hover: hover) and (pointer: fine)').matches
@@ -32,6 +33,22 @@ export const minuteFormat = new Intl.DateTimeFormat('en-GB', {
   hour: '2-digit',
   minute: '2-digit',
 })
+const dayFormat = new Intl.DateTimeFormat('en-CA', {
+  timeZone,
+  year: 'numeric',
+  month: 'numeric',
+  day: 'numeric',
+})
+
+// The age on today's date in Dronten, like the clock in the HUD.
+export function currentAge(now = new Date()) {
+  const [year = 0, month = 0, day = 0] = dayFormat
+    .formatToParts(now)
+    .filter((part) => part.type !== 'literal')
+    .map((part) => Number(part.value))
+  return ageOn({ year, month, day })
+}
+
 const DATE_OPTIONS: Intl.DateTimeFormatOptions = {
   timeZone,
   dateStyle: 'full',

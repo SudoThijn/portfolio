@@ -207,7 +207,7 @@ export const en = {
   'term.banner': 'TD-OS v1.0 · root access granted (not really)',
   'term.bannerHelp': 'Type help to list commands. Tab completes.',
   'term.about': [
-    'Thijn Douwma, 23. Frontend developer from Dronten, NL.',
+    'Thijn Douwma, {age}. Frontend developer from Dronten, NL.',
     'Vue, React and browser extensions. 8+ years of code, 2.5 of them professional.',
     'Available from January 2027.',
   ],

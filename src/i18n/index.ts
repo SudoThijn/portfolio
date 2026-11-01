@@ -30,12 +30,16 @@ export const locale = ref<Locale>(initialLocale())
 export function t(key: MessageKey, params?: Params): string {
   const message = messages[locale.value][key]
   const text = typeof message === 'string' ? message : message.join('\n')
-  return params ? text.replace(/\{(\w+)\}/g, (_, name: string) => String(params[name] ?? '')) : text
+  return params ? fill(text, params) : text
 }
 
-export function list(key: MessageKey): string[] {
+const fill = (text: string, params: Params) =>
+  text.replace(/\{(\w+)\}/g, (_, name: string) => String(params[name] ?? ''))
+
+export function list(key: MessageKey, params?: Params): string[] {
   const message = messages[locale.value][key]
-  return typeof message === 'string' ? [message] : [...message]
+  const lines = typeof message === 'string' ? [message] : [...message]
+  return params ? lines.map((line) => fill(line, params)) : lines
 }
 
 // Text that is either shown as it is, like a name, or looked up in the dictionary.

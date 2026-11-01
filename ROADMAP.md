@@ -49,11 +49,11 @@ Claude wrote some of the copy, so all of it needs a read, starting with:
 Facts to confirm or decide:
 
 - "8+ years" of coding, 2.5 professional, and "available from January 2027".
-- LV.23 is the current age. It could be calculated from the birth date, so it ticks up to LV.24 on 7 October 2027 by itself.
+- The level is the current age, calculated from the birth date in `src/lib/age.ts` on Dronten's date, so it ticks up to LV.24 on 7 October 2027 by itself (done 2026-11-01). It shows in the hero badge, on the player card and in `about.txt`.
 - Dronten coordinates in the hero (52.52°N 5.72°E).
 - A photo, or an avatar replacing the TD emblem.
 - Builds shows the Keepiq extension plus the SudoThijn profile card, and that is deliberate: repos from the RalkeyOfficial account stay off the site so the two identities are not linked. More projects can come once they live under SudoThijn.
-- Phone number and birth date stay off the public site unless decided otherwise.
+- The phone number stays off the public site unless decided otherwise. The birth date is in the public source on purpose, since the age is calculated from it (decided 2026-11-01).
 
 ## 4. Sound effects
 

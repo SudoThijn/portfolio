@@ -168,7 +168,7 @@ test.describe('selecting text', () => {
     for (const decorative of [/テイン/, /フロントエンド開発者/, /sudothijn/i, /sync 100%/i]) {
       expect(text).not.toMatch(decorative)
     }
-    expect(text).not.toMatch(/LV\.?\s*23/i)
+    expect(text).not.toMatch(/LV\.?\s*\d\d/i)
   })
 
   test('the decorative Japanese text is generated content, not text', async ({ page }) => {

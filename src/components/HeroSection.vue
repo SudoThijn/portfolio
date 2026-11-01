@@ -3,7 +3,7 @@ import { nextTick, onBeforeUnmount, onMounted, useTemplateRef, watch } from 'vue
 import { overdrive } from '@/eggs/modes'
 import { t } from '@/i18n'
 import { mountEmblemSpin } from '@/lib/emblemSpin'
-import { finePointer, reduceMotion } from '@/lib/env'
+import { currentAge, finePointer, reduceMotion } from '@/lib/env'
 import { scramble } from '@/lib/scramble'
 import TickerBand from './TickerBand.vue'
 
@@ -13,7 +13,7 @@ const statusText = () =>
     : t('hero.status')
 
 const level = useTemplateRef<HTMLElement>('level')
-const levelText = () => (overdrive.value ? 'LV.99' : 'LV.23')
+const levelText = () => (overdrive.value ? 'LV.99' : `LV.${currentAge()}`)
 
 // The badge text comes from the template, and the scramble only plays over the new text.
 watch(overdrive, async () => {

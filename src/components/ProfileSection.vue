@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { openTerminal } from '@/eggs/terminal'
+import { currentAge } from '@/lib/env'
 import { label, t, type Label, type MessageKey } from '@/i18n'
 import SectionHead from './SectionHead.vue'
 
@@ -61,7 +62,7 @@ const info = computed(() => {
           <div class="idcard__top">
             <div class="level">
               <span class="level__lv mono">LV</span>
-              <span class="level__num">23</span>
+              <span class="level__num">{{ currentAge() }}</span>
             </div>
             <div class="idcard__who">
               <p class="idcard__name">Thijn Douwma</p>

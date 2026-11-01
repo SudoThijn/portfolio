@@ -1,6 +1,6 @@
 import { computed, ref, watch } from 'vue'
 import { list, locale, t } from '@/i18n'
-import { formatDate } from '@/lib/env'
+import { currentAge, formatDate } from '@/lib/env'
 import { enterLeet, isLeet } from './modes'
 import { SECRETS, found, resetSecrets, secretField, unlock } from './secrets'
 
@@ -26,7 +26,7 @@ export const lines = ref<Line[]>([])
 // File names are the same in every language, so commands and Tab completion keep working.
 // Each file is a function so only the one being read gets translated.
 const FILES: Record<string, () => string[]> = {
-  'about.txt': () => list('term.about'),
+  'about.txt': () => list('term.about', { age: currentAge() }),
   'quests.log': () => list('term.quests'),
   'contact.txt': () => [
     'email     thijn.douwma@outlook.com',

@@ -210,7 +210,7 @@ export const nl: Record<keyof typeof en, string | readonly string[]> = {
   'term.banner': 'TD-OS v1.0 · root-toegang verleend (niet echt)',
   'term.bannerHelp': 'Typ help voor de commando’s. Tab vult aan.',
   'term.about': [
-    'Thijn Douwma, 23. Frontend developer uit Dronten, NL.',
+    'Thijn Douwma, {age}. Frontend developer uit Dronten, NL.',
     'Vue, React en browserextensies. 8+ jaar code, waarvan 2,5 professioneel.',
     'Beschikbaar vanaf januari 2027.',
   ],
