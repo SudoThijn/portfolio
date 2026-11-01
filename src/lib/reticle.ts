@@ -1,8 +1,11 @@
 import { finePointer, pointer, reduceMotion } from './env'
 import { playLockOn } from './sound'
 
-// Set by the charge-shot egg: 0 is idle, 1 is fully charged.
-export const reticleState = { charge: 0 }
+export const CLIP_SIZE = 3
+
+// Set by the charge-shot egg: charge is 0 when idle and 1 when fully charged. In overdrive the
+// clip holds a few shots, and the cooldown runs from 0 after a shot to 1 when the clip is full.
+export const reticleState = { charge: 0, ammo: CLIP_SIZE, cooldown: 1 }
 
 const LOCKABLE = 'a, button, input, .stat, .block--chip'
 const IDLE = 28
@@ -15,6 +18,7 @@ export function mountReticle(reticle: HTMLElement): () => void {
   const box = { x: -100, y: -100, w: IDLE, h: IDLE }
   let lockTarget: Element | null = null
   let frame = 0
+  let shownAmmo = -1
 
   const onOver = (e: Event) => {
     const target = (e.target as Element).closest(LOCKABLE)
@@ -48,6 +52,12 @@ export function mountReticle(reticle: HTMLElement): () => void {
     reticle.style.setProperty('--charge', String(reticleState.charge))
     reticle.classList.toggle('is-charging', reticleState.charge > 0.1)
     reticle.classList.toggle('is-full', reticleState.charge >= 1)
+    reticle.style.setProperty('--cool', String(reticleState.cooldown))
+    if (reticleState.ammo !== shownAmmo) {
+      shownAmmo = reticleState.ammo
+      reticle.dataset.ammo = String(shownAmmo)
+      reticle.classList.toggle('is-overheated', shownAmmo <= 0)
+    }
     frame = requestAnimationFrame(follow)
   }
 

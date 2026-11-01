@@ -1158,9 +1158,162 @@ html.js .panel-block:not(.in) .segs i.on { opacity: 0; transform: skewX(var(--sk
   rotate: 45deg;
   animation: burst .65s var(--ease-out) forwards;
 }
-@keyframes burst { to { scale: 14; opacity: 0; border-width: 1px; } }
+@keyframes burst { to { scale: var(--blast-scale, 14); opacity: 0; border-width: 1px; } }
 .reticle.is-charging i { border-color: var(--magenta); filter: drop-shadow(0 0 6px var(--magenta)); }
 .reticle.is-full i { border-color: var(--yellow); filter: drop-shadow(0 0 8px var(--yellow)); }
+
+/* Overdrive weapon: the clip shows under the cursor, and an empty clip overheats until it refills. */
+.reticle__ammo { display: none; }
+html.overdrive .reticle__ammo {
+  position: absolute;
+  left: 50%;
+  top: calc(100% + 10px);
+  translate: -50% 0;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 4px;
+  width: 84px;
+}
+.reticle__ammo b {
+  width: 16px;
+  height: 6px;
+  background: var(--yellow);
+  box-shadow: 0 0 8px var(--yellow);
+  transform: skewX(-20deg);
+  transition: background .12s, box-shadow .12s, opacity .12s;
+}
+.reticle[data-ammo="0"] .reticle__ammo b,
+.reticle[data-ammo="1"] .reticle__ammo b:nth-child(n + 2),
+.reticle[data-ammo="2"] .reticle__ammo b:nth-child(3) { background: var(--line-bright); box-shadow: none; opacity: .6; }
+.reticle__ammo s {
+  position: relative;
+  flex-basis: 100%;
+  height: 2px;
+  background: var(--line-bright);
+  opacity: 0;
+  transition: opacity .15s;
+}
+.reticle__ammo s::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: var(--magenta);
+  transform-origin: left;
+  transform: scaleX(var(--cool, 1));
+}
+.reticle:is([data-ammo="0"], [data-ammo="1"], [data-ammo="2"]) .reticle__ammo s { opacity: 1; }
+html.overdrive .reticle.is-overheated i {
+  border-color: var(--yellow);
+  filter: drop-shadow(0 0 8px var(--yellow));
+  animation: overheat-jitter .14s steps(2) infinite;
+}
+html.overdrive .reticle.is-overheated .reticle__ammo::after {
+  content: "Overheat";
+  flex-basis: 100%;
+  text-align: center;
+  font: 700 9px/1 var(--font-mono);
+  letter-spacing: .2em;
+  text-transform: uppercase;
+  color: var(--yellow);
+}
+@keyframes overheat-jitter { 50% { translate: 1px -1px; } }
+
+/* An overdrive shot: a flash, two rings, flying shards and a kick of the page. The last shot of the clip is heavier. */
+.blast { position: fixed; left: 0; top: 0; z-index: 61; width: 0; height: 0; pointer-events: none; }
+.blast .burst { position: absolute; }
+.blast--overdrive .burst { --blast-scale: 18; }
+.blast--last .burst { --blast-scale: 28; animation-duration: .9s; }
+.burst--late { border-color: var(--magenta); animation: burst-late .7s var(--ease-out) .08s both; }
+@keyframes burst-late {
+  0% { opacity: 0; scale: .6; }
+  1% { opacity: 1; scale: .6; }
+  100% { opacity: 0; scale: var(--blast-scale, 14); border-width: 1px; }
+}
+.blast__flash {
+  position: absolute;
+  width: 50px;
+  height: 50px;
+  margin: -25px 0 0 -25px;
+  background: #fff;
+  box-shadow: 0 0 50px 18px var(--yellow);
+  rotate: 45deg;
+  animation: blast-flash .24s linear forwards;
+}
+.blast--last .blast__flash { width: 90px; height: 90px; margin: -45px 0 0 -45px; }
+/* It stays bright and then drops away, because a slow fade passes through a muddy grey. */
+@keyframes blast-flash {
+  0% { scale: .3; opacity: 1; }
+  35% { scale: 1.8; opacity: 1; }
+  100% { scale: 3.4; opacity: 0; }
+}
+.blast__shard {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 12px;
+  height: 3px;
+  margin: -1.5px 0 0 -6px;
+  background: var(--yellow);
+  box-shadow: 0 0 6px var(--yellow);
+  animation: blast-shard .75s var(--ease-out) forwards;
+}
+.blast__shard:nth-of-type(3n) { background: var(--magenta); box-shadow: 0 0 6px var(--magenta); }
+@keyframes blast-shard {
+  from { transform: rotate(var(--a)) translateX(18px); opacity: 1; }
+  60% { opacity: 1; }
+  to { transform: rotate(var(--a)) translateX(var(--d, 140px)) scaleX(.5); opacity: 0; }
+}
+html.od-recoil main,
+html.od-recoil .hud { animation: recoil .18s steps(1) both; }
+html.od-recoil--heavy main,
+html.od-recoil--heavy .hud { animation-name: recoil-heavy; animation-duration: .22s; }
+@keyframes recoil {
+  0% { translate: 0 3px; }
+  40% { translate: 2px -2px; }
+  70% { translate: -1px 1px; }
+  100% { translate: 0 0; }
+}
+@keyframes recoil-heavy {
+  0% { translate: 0 9px; }
+  25% { translate: -6px -5px; }
+  50% { translate: 5px 4px; }
+  75% { translate: -3px -2px; }
+  100% { translate: 0 0; }
+}
+
+/* Pressed while the clip is empty. */
+.deny {
+  position: fixed;
+  z-index: 61;
+  width: 30px;
+  height: 30px;
+  margin: -15px 0 0 -15px;
+  border: 2px solid var(--yellow);
+  pointer-events: none;
+  animation: deny .45s steps(1) forwards;
+}
+.deny::before,
+.deny::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 2px;
+  height: 70%;
+  background: var(--yellow);
+  translate: -50% -50%;
+  rotate: 45deg;
+}
+.deny::after { rotate: -45deg; }
+@keyframes deny {
+  0% { translate: -4px 0; }
+  20% { translate: 4px 0; }
+  40% { translate: -3px 0; }
+  60% { translate: 3px 0; }
+  80% { translate: 0 0; opacity: .5; }
+  100% { opacity: 0; }
+}
 
 /* Overdrive: anime cut-in, then the whole page runs hot */
 .cutin {

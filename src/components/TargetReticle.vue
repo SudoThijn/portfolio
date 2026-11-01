@@ -12,5 +12,8 @@ onBeforeUnmount(() => unmount())
 </script>
 
 <template>
-  <div class="reticle" ref="reticle" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+  <div class="reticle" ref="reticle" aria-hidden="true">
+    <i></i><i></i><i></i><i></i>
+    <span class="reticle__ammo"><b></b><b></b><b></b><s></s></span>
+  </div>
 </template>

@@ -8,6 +8,7 @@ The design phase is done: a working single-page design (`index.html`, `style.css
 - Easter eggs, 7 secrets with achievement toasts, a "Secrets n/7" HUD counter and a level-up splash at 7/7:
   - Layer 1: Konami code → OVERDRIVE, typing `sudo` → terminal (with `cd`, Tab completion, history), reticle charge shot, DevTools console `hack()`.
   - Layer 2: LEET mode (13:37, five clicks on the clock, or `1337` in the terminal), Ctrl+S save point, tab-away title and icon.
+  - Overdrive weapon (2026-11-01): in overdrive the charge shot is ready in 0.26 s instead of 0.9 s, and the clip holds 3 shots. The clip refills in full 1 s after the last shot, so an empty clip means an overheat of about a second (a press during it gets a denied flash). The clip is shown under the square cursor as three pips, a cooling bar and an "Overheat" label, so it needs the reticle (fine pointer, no reduced motion). Each shot adds a flash, two rings, shards, a second dot-field shockwave and a kick of the page, and the third is heavier. It reuses the existing charge and shot sounds, and an overdrive fire, overheat or ready sound is still open. Leaving overdrive refills the clip.
 - Egg ideas not picked so far: idle standby screen, password-lab secret replies, gacha pull on the emblem, speedrun timer.
 - Visual work is verified with the `my-frontend-design` skill's `scripts/shoot.mjs`. The per-egg Playwright scripts from the design sessions lived in a temporary scratchpad and are gone, so they need rebuilding as a proper test suite (see step 1).
 

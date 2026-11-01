@@ -123,6 +123,9 @@ async function boxOf(locator: Locator) {
 const voices = (page: Page) => page.evaluate(() => window.__voices)
 const storedPreference = (page: Page) => page.evaluate(() => localStorage.getItem('td-sound'))
 
+const isLike = (v: Voice, duration: number, loop: boolean) =>
+  Math.abs(v.duration - duration) < 0.01 && v.loop === loop
+
 // Polls until a voice of this length (and looping state) has started, then returns it.
 async function voiceLike(page: Page, duration: number, loop: boolean) {
   await expect
@@ -354,6 +357,41 @@ test.describe('what plays', () => {
     await expect.poll(async () => (await loop()).every((v) => v.stopped)).toBe(true)
     await pause(500)
     expect((await voices(page)).some((v) => Math.abs(v.duration - SHOT) < 0.01)).toBe(false)
+  })
+
+  test('OVERDRIVE fires three quick shots, then stays silent until the clip refills', async ({
+    page,
+  }) => {
+    await soundOn(page)
+    for (const key of KONAMI) await page.keyboard.press(key)
+    await expect(page.locator('html')).toHaveClass(/overdrive/)
+    const { x, y } = await emptySpot(page)
+    await page.mouse.move(x, y)
+
+    const shots = () => voices(page).then((all) => all.filter((v) => isLike(v, SHOT, false)))
+    const charges = () =>
+      voices(page).then((all) => all.filter((v) => isLike(v, CHARGE_START, false)))
+    for (let i = 1; i <= 3; i++) {
+      await page.mouse.down()
+      await expect(page.locator('.charge')).toHaveClass(/is-full/)
+      await page.mouse.up()
+      await expect.poll(async () => (await shots()).length).toBe(i)
+    }
+    expect(await charges()).toHaveLength(3)
+
+    // The clip is empty, so a press starts no charge and fires nothing.
+    await page.mouse.down()
+    await pause(500)
+    await page.mouse.up()
+    expect(await charges()).toHaveLength(3)
+    expect(await shots()).toHaveLength(3)
+
+    // A second after the last shot the clip is back.
+    await pause(600)
+    await page.mouse.down()
+    await expect(page.locator('.charge')).toHaveClass(/is-full/)
+    await page.mouse.up()
+    await expect.poll(async () => (await shots()).length).toBe(4)
   })
 
   test('a quick click on the background makes no charge sound', async ({ page }) => {

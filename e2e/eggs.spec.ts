@@ -28,6 +28,9 @@ test.beforeEach(async ({ page }) => {
   await page.goto('/')
 })
 
+// Holding the mouse and checking that nothing happened both need real time.
+const pause = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
+
 const html = (page: Page) => page.locator('html')
 const chip = (page: Page) => page.locator('.hud__secrets')
 const toastTitles = (page: Page) => page.locator('.toast__title')
@@ -337,6 +340,96 @@ test.describe('charge shot', () => {
     await page.mouse.down()
     await expect(page.locator('.charge')).not.toHaveClass(/is-on/)
     await page.mouse.up()
+  })
+})
+
+test.describe('overdrive weapon', () => {
+  // The clip is shown on the reticle, which only exists with motion.
+  test.use({ reducedMotion: 'no-preference' })
+
+  const reticle = (page: Page) => page.locator('.reticle')
+  const charge = (page: Page) => page.locator('.charge')
+
+  async function shoot(page: Page) {
+    const { x, y } = await emptySpot(page)
+    await page.mouse.move(x, y)
+    await page.mouse.down()
+    await expect(charge(page)).toHaveClass(/is-full/)
+    await page.mouse.up()
+  }
+
+  async function goOverdrive(page: Page) {
+    await enterKonami(page)
+    await expect(html(page)).toHaveClass(/overdrive/)
+  }
+
+  test('a shot is ready much faster than the normal charge', async ({ page }) => {
+    const { x, y } = await emptySpot(page)
+    await page.mouse.move(x, y)
+    await page.mouse.down()
+    await pause(500)
+    await expect(charge(page)).not.toHaveClass(/is-full/)
+    await page.mouse.up()
+
+    await goOverdrive(page)
+    await page.mouse.down()
+    await expect(charge(page)).toHaveClass(/is-full/, { timeout: 500 })
+    await page.mouse.up()
+  })
+
+  test('holds three shots, then overheats, refuses a press and refills a second later', async ({
+    page,
+  }) => {
+    await goOverdrive(page)
+    await expect(reticle(page)).toHaveAttribute('data-ammo', '3')
+
+    for (const left of ['2', '1', '0']) {
+      await shoot(page)
+      await expect(reticle(page)).toHaveAttribute('data-ammo', left)
+    }
+    await expect(reticle(page)).toHaveClass(/is-overheated/)
+    // The last shot of the clip is the heavy one.
+    await expect(page.locator('.blast--last .blast__shard')).toHaveCount(20)
+
+    const { x, y } = await emptySpot(page)
+    await page.mouse.move(x, y)
+    await page.mouse.down()
+    await expect(page.locator('.deny')).toBeVisible()
+    await pause(300)
+    await expect(charge(page)).not.toHaveClass(/is-on/)
+    await page.mouse.up()
+
+    await expect(reticle(page)).toHaveAttribute('data-ammo', '3', { timeout: 2500 })
+    await expect(reticle(page)).not.toHaveClass(/is-overheated/)
+    await shoot(page)
+    await expect(reticle(page)).toHaveAttribute('data-ammo', '2')
+  })
+
+  test('each shot gets a flash, rings and shards', async ({ page }) => {
+    await goOverdrive(page)
+    await shoot(page)
+    const blast = page.locator('.blast--overdrive')
+    await expect(blast).toHaveCount(1)
+    await expect(blast.locator('.burst')).toHaveCount(2)
+    await expect(blast.locator('.blast__flash')).toHaveCount(1)
+    await expect(blast.locator('.blast__shard')).toHaveCount(10)
+  })
+
+  test('leaving overdrive hands back a full clip', async ({ page }) => {
+    await goOverdrive(page)
+    await shoot(page)
+    await expect(reticle(page)).toHaveAttribute('data-ammo', '2')
+    await page.keyboard.press('Escape')
+    await expect(html(page)).not.toHaveClass(/overdrive/)
+    await expect(reticle(page)).toHaveAttribute('data-ammo', '3')
+  })
+
+  test('normal mode has no clip and no extra effects', async ({ page }) => {
+    await shoot(page)
+    await expect(reticle(page)).toHaveAttribute('data-ammo', '3')
+    await expect(page.locator('.blast')).toHaveCount(1)
+    await expect(page.locator('.blast .burst')).toHaveCount(1)
+    await expect(page.locator('.blast__shard')).toHaveCount(0)
   })
 })
 

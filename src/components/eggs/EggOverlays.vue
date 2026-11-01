@@ -1,9 +1,18 @@
 <script setup lang="ts">
-import { bursts, ring } from '@/eggs/charge'
+import { bursts, denials, ring } from '@/eggs/charge'
 import { cutinPlaying, cutinRun, overdrive, setOverdrive } from '@/eggs/modes'
 import { saveBox } from '@/eggs/savepoint'
 import { SECRETS, toasts } from '@/eggs/secrets'
 import { finePointer } from '@/lib/env'
+
+const SHARDS = 10
+const shardCount = (last: boolean) => (last ? SHARDS * 2 : SHARDS)
+
+// Shards fan out evenly, with every other one nudged and their reach varying in three steps.
+const shardStyle = (n: number, count: number) => ({
+  '--a': `${(360 / count) * n + (n % 2) * 7}deg`,
+  '--d': `${110 + (n % 3) * 55}px`,
+})
 
 // Only mention the Esc key where there is likely a keyboard.
 const escHint = finePointer ? ' · Esc' : ''
@@ -50,8 +59,29 @@ const escHint = finePointer ? ' · Esc' : ''
   <div
     v-for="burst in bursts"
     :key="burst.key"
-    class="burst"
+    class="blast"
+    :class="{ 'blast--overdrive': burst.overdrive, 'blast--last': burst.last }"
     :style="{ left: `${burst.x}px`, top: `${burst.y}px` }"
+    aria-hidden="true"
+  >
+    <div class="burst"></div>
+    <template v-if="burst.overdrive">
+      <div class="burst burst--late"></div>
+      <div class="blast__flash"></div>
+      <i
+        v-for="n in shardCount(burst.last)"
+        :key="n"
+        class="blast__shard"
+        :style="shardStyle(n, shardCount(burst.last))"
+      ></i>
+    </template>
+  </div>
+  <div
+    v-for="denial in denials"
+    :key="denial.key"
+    class="deny"
+    aria-hidden="true"
+    :style="{ left: `${denial.x}px`, top: `${denial.y}px` }"
   ></div>
 
   <div
