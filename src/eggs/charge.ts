@@ -1,10 +1,10 @@
 import { reactive, ref, watch } from 'vue'
 import { dialogOpen } from '@/lib/dom'
-import { reduceMotion } from '@/lib/env'
+import { finePointer, reduceMotion } from '@/lib/env'
 import { field } from '@/lib/field'
 import { CLIP_SIZE, reticleState } from '@/lib/reticle'
 import { startCharge, type Charge } from '@/lib/sound'
-import { overdrive } from './modes'
+import { isLeet, overdrive } from './modes'
 import { unlock } from './secrets'
 
 const CHARGE_MS = 900
@@ -18,6 +18,8 @@ const COOLDOWN_MS = 1000
 const SECOND_WAVE_MS = 110
 const RECOIL_MS = 220
 const NOT_EMPTY = 'a, button, input, textarea, select, label, dialog, .stat, .lab'
+// The reticle is only mounted with a fine pointer and motion, so the others get a denial mark.
+const reticleShown = finePointer && !reduceMotion
 
 interface Blast {
   key: number
@@ -93,7 +95,7 @@ function recoil(heavy: boolean) {
 function addTransient<T extends { key: number }>(list: { value: T[] }, item: T, ms: number) {
   list.value.push(item)
   setTimeout(() => {
-    list.value = list.value.filter((entry) => entry !== item)
+    list.value = list.value.filter((entry) => entry.key !== item.key)
   }, ms)
 }
 
@@ -144,6 +146,12 @@ export function initCharge() {
     }
     if (overdrive.value && reticleState.ammo <= 0) {
       deny(e.clientX, e.clientY)
+      return
+    }
+    // LEET mode: the weapon is dead, and pressing is how the visitor finds out.
+    if (isLeet()) {
+      reticleState.failedAt = performance.now()
+      if (!reticleShown) deny(e.clientX, e.clientY)
       return
     }
     charging = true

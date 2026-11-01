@@ -489,6 +489,37 @@ test.describe('LEET mode', () => {
     await expect(html(page)).toHaveClass(/leet/)
   })
 
+  test('does not start by itself when 13:37 passes in a hidden tab', async ({ page }) => {
+    await page.clock.install({ time: new Date('2026-10-31T12:36:58Z') })
+    await page.reload()
+    await page.evaluate(() =>
+      Object.defineProperty(document, 'hidden', { get: () => true, configurable: true }),
+    )
+    await page.clock.runFor(3000)
+    await page.evaluate(() => delete (document as { hidden?: boolean }).hidden)
+    await page.clock.runFor(3000)
+    await expect(html(page)).not.toHaveClass(/leet/)
+  })
+
+  test.describe('charge shot', () => {
+    // The reticle that shows the failure only exists when motion is allowed.
+    test.use({ reducedMotion: 'no-preference' })
+
+    test('pressing locks the reticle and never starts a charge', async ({ page }) => {
+      await clickClock(page, 5)
+      await expect(html(page)).toHaveClass(/leet/)
+      const { x, y } = await emptySpot(page)
+      await page.mouse.move(x, y)
+      await expect(page.locator('.reticle')).not.toHaveClass(/is-failed/)
+      await page.mouse.down()
+      await expect(page.locator('.reticle')).toHaveClass(/is-failed/)
+      await pause(1100)
+      await expect(page.locator('.charge')).not.toHaveClass(/is-on/)
+      await page.mouse.up()
+      expect(await storedSecrets(page)).toEqual(['leet'])
+    })
+  })
+
   test('OVERDRIVE and LEET replace each other', async ({ page }) => {
     await enterKonami(page)
     await expect(html(page)).toHaveClass(/overdrive/)

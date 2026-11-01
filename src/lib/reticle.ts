@@ -5,10 +5,12 @@ export const CLIP_SIZE = 3
 
 // Set by the charge-shot egg: charge is 0 when idle and 1 when fully charged. In overdrive the
 // clip holds a few shots, and the cooldown runs from 0 after a shot to 1 when the clip is full.
-export const reticleState = { charge: 0, ammo: CLIP_SIZE, cooldown: 1 }
+// failedAt is when LEET mode last made a charge shot fail.
+export const reticleState = { charge: 0, ammo: CLIP_SIZE, cooldown: 1, failedAt: -Infinity }
 
 const LOCKABLE = 'a, button, input, .stat, .block--chip'
 const IDLE = 28
+const FAILED_MS = 900
 
 const lerp = (a: number, b: number, t: number) => a + (b - a) * t
 
@@ -52,6 +54,7 @@ export function mountReticle(reticle: HTMLElement): () => void {
     reticle.style.setProperty('--charge', String(reticleState.charge))
     reticle.classList.toggle('is-charging', reticleState.charge > 0.1)
     reticle.classList.toggle('is-full', reticleState.charge >= 1)
+    reticle.classList.toggle('is-failed', performance.now() - reticleState.failedAt < FAILED_MS)
     reticle.style.setProperty('--cool', String(reticleState.cooldown))
     if (reticleState.ammo !== shownAmmo) {
       shownAmmo = reticleState.ammo

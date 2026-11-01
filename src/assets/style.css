@@ -1315,6 +1315,35 @@ html.od-recoil--heavy .hud { animation-name: recoil-heavy; animation-duration: .
   100% { opacity: 0; }
 }
 
+/* LEET mode: the charge shot looks normal until it is released, then the reticle is taken over. */
+html.leet .reticle.is-failed i {
+  width: 16px;
+  height: 16px;
+  border-color: var(--od-red);
+  filter: drop-shadow(0 0 6px var(--od-red));
+  animation: hack-jitter .08s steps(1) infinite;
+}
+@keyframes hack-jitter {
+  25% { translate: 3px -2px; }
+  50% { translate: -3px 1px; }
+  75% { translate: 2px 2px; }
+}
+html.leet .reticle.is-failed .reticle__ammo {
+  position: absolute;
+  left: 50%;
+  top: calc(100% + 10px);
+  translate: -50% 0;
+  display: block;
+  white-space: nowrap;
+}
+html.leet .reticle.is-failed .reticle__ammo :is(b, s) { display: none; }
+html.leet .reticle.is-failed .reticle__ammo::after {
+  content: "LOCKED";
+  color: var(--od-red);
+  font: 700 9px/1 var(--font-mono);
+  letter-spacing: .2em;
+}
+
 /* Overdrive: anime cut-in, then the whole page runs hot */
 .cutin {
   position: fixed;
