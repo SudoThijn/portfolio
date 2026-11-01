@@ -1,4 +1,5 @@
 import { computed, reactive, ref } from 'vue'
+import { playToast } from '@/lib/sound'
 
 export const SECRETS = [
   {
@@ -84,6 +85,7 @@ let toastKey = 0
 function showToast(secret: (typeof SECRETS)[number]) {
   const toast = reactive<Toast>({ key: toastKey++, secret, count: found.size, out: false })
   toasts.value.push(toast)
+  void playToast()
   setTimeout(() => {
     toast.out = true
   }, 4200)

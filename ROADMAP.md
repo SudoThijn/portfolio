@@ -64,6 +64,8 @@ The hardest part, because the right sounds are hard to find. Ground rules:
 
 Built (2026-10-31): `src/lib/sound.ts` is a Web Audio engine that is only created, fetched and decoded after sound is switched on. The HUD has a "Sound: on/off" toggle, left of the secrets counter (on by default, saved in `td-sound`, and it starts on the first gesture of a visit). Wired so far: the quiet hum (18%), the Hard Boss Battle 1 song while OVERDRIVE is active, the charge shot (starts with the ring, fires on a full release, fizzles out on an early one), Warp Drive when LEET starts, "Arcade bonus" on the level up, and the Menu open/close sounds for the credits popup. The footer "Sound credits" button opens that popup, which CC-BY requires. Levels are constants at the top of `sound.ts`. Tested only in Chromium; Safari's support for OGG Vorbis was not checked, so check it before launch. `e2e/sound.spec.ts` records every buffer the page starts and asserts which sound plays for each event.
 
+Interface sounds (2026-11-01), picked on a sound board of 11 OpenGameArt packs: the reticle locking onto a target plays Hi-Tech Button Sound Pack I "Window Open 2" (CC0, Circlerun), and a new lock-on cuts the previous one so a sweep does not stack them. The achievement toast plays UI Sounds "#9" (CC0, HaelDB). Every key typed in the terminal, and Backspace, plays one of four Single Key Press Sounds (CC-BY 3.0, eklee, extracted by qubodup: Old01, Old02, Old03 and Old05) at random, never the same one twice in a row. The files are trimmed, because the sources have up to a second of silence after the sound, and peak-normalised like the board was. The levels (25%, 100% and 50%) are the board levels divided by the master gain. The lock-on needs the reticle, so it is absent with reduced motion or a touch screen. Hover in and out, click, copy, terminal error and the other UI slots were left silent on purpose, since nothing on the board felt right.
+
 Decisions so far (2026-10-31):
 
 - Taken: "Friendly Talk On A Robotic Battlefield (looped)" from OpenGameArt, CC0, as music.
@@ -79,7 +81,7 @@ Decisions so far (2026-10-31):
 - Parked: "Menu open 1" and "Menu close 1" (UI Menu Open and Close, FiveBrosStopMosYT, CC-BY 4.0) for popups. There are none yet, and the footer credits popup would be the first.
 - Not liked: the Achievement jingle, Victory and the synth win jingles. The pack names are not descriptive, so audition by ear.
 - Level matching is needed when wiring: Friendly Talk is much louder than Hard Boss Battle 1 (RMS 0.50 against 0.28), and Friendly Talk's loop wrap is a slightly bigger jump than its normal steps.
-- Still open: which of Friendly Talk, Synthetic Whisper and Orbital Colossus is the background music and which (if any) is for LEET, and all UI, toast and terminal sounds. Nothing heard so far was liked for the UI sounds.
+- Still open: which of Friendly Talk, Synthetic Whisper and Orbital Colossus is the background music and which (if any) is for LEET, and the UI sounds that are still silent (hover in and out, click, copy confirmation, terminal error, terminal open and close). Few of the candidates were liked, and Artlist sounds were considered but need a subscription and their licence does not clearly allow shipping the files on a public site.
 - OVERDRIVE has no timer and lasts until the visitor exits, so its music has to loop or end gracefully. LEET lasts 13.37 s, so it only needs a cue of that length.
 
 Where sounds can come from:
@@ -91,11 +93,11 @@ Suggested approach: build a small "sound board" page that plays candidate sounds
 
 Events that need a sound:
 
-- UI: hover tick on lockable elements, click, copy confirmation.
-- Achievement toast chime, and the level-up fanfare.
+- UI: hover tick on lockable elements (done, as the reticle lock-on), click, copy confirmation.
+- Achievement toast chime (done), and the level-up fanfare (done).
 - OVERDRIVE: cut-in whoosh plus a heavy hit, and a power-down when exiting.
 - LEET: glitch or modem burst on entry.
-- Terminal: open/close, keystrokes, error buzz.
+- Terminal: open/close, keystrokes (done), error buzz.
 - Charge shot: rising charge tone, release blast.
 - Save point jingle, and the reconnect blip after a tab-away.
 

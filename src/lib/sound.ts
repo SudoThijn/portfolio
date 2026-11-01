@@ -3,10 +3,16 @@ import bedUrl from '@/assets/audio/bed-hum.ogg'
 import chargeFireUrl from '@/assets/audio/charge-fire.ogg'
 import chargeLoopUrl from '@/assets/audio/charge-loop.ogg'
 import chargeStartUrl from '@/assets/audio/charge-start.ogg'
+import key1Url from '@/assets/audio/key-1.ogg'
+import key2Url from '@/assets/audio/key-2.ogg'
+import key3Url from '@/assets/audio/key-3.ogg'
+import key4Url from '@/assets/audio/key-4.ogg'
 import levelUpUrl from '@/assets/audio/level-up.ogg'
+import lockOnUrl from '@/assets/audio/lock-on.ogg'
 import overdriveUrl from '@/assets/audio/overdrive-music.ogg'
 import popupCloseUrl from '@/assets/audio/popup-close.ogg'
 import popupOpenUrl from '@/assets/audio/popup-open.ogg'
+import toastUrl from '@/assets/audio/toast.ogg'
 import warpUrl from '@/assets/audio/warp.ogg'
 
 // Levels were picked by ear on a sound board, so they are relative to each other.
@@ -17,6 +23,11 @@ const FADE = 0.4
 const MUSIC_FADE_IN = 0.05
 const CHARGE_OVERLAP = 0.5
 const CHARGE_FIZZLE = 0.15
+const LOCK_ON = 0.25
+// A new lock-on cuts the previous one, so sweeping over several targets never stacks them.
+const LOCK_CUT = 0.08
+const TOAST = 1
+const KEY = 0.5
 const STORE_KEY = 'td-sound'
 
 function readPreference() {
@@ -141,12 +152,19 @@ function createLoop(url: string, level: number, wanted: () => boolean, fadeIn = 
 const syncBed = createLoop(bedUrl, BED, enabled)
 const syncMusic = createLoop(overdriveUrl, 1, () => enabled() && overdriveWanted, MUSIC_FADE_IN)
 
+const KEY_URLS = [key1Url, key2Url, key3Url, key4Url] as const
+
 // The song is large, so it is fetched and decoded once the page is idle. That way OVERDRIVE can
-// start it the instant it is asked for, instead of waiting for the download.
-function preloadSong() {
-  const fetchSong = () => void load(overdriveUrl).catch(() => {})
-  if ('requestIdleCallback' in window) requestIdleCallback(fetchSong, { timeout: 3000 })
-  else setTimeout(fetchSong, 2000)
+// start it the instant it is asked for, instead of waiting for the download. The small interface
+// sounds come along so the first hover or keystroke is not delayed.
+function preload() {
+  const fetchAll = () => {
+    for (const url of [overdriveUrl, lockOnUrl, toastUrl, ...KEY_URLS]) {
+      void load(url).catch(() => {})
+    }
+  }
+  if ('requestIdleCallback' in window) requestIdleCallback(fetchAll, { timeout: 3000 })
+  else setTimeout(fetchAll, 2000)
 }
 
 function syncAll() {
@@ -158,7 +176,7 @@ function unlock() {
   unlocked.value = true
   void getEngine().ctx.resume()
   syncAll()
-  preloadSong()
+  preload()
 }
 
 export function toggleSound() {
@@ -182,19 +200,49 @@ export function overdriveMusic(on: boolean) {
   void syncMusic()
 }
 
-async function playOnce(url: string) {
+async function playOnce(url: string, level = 1) {
   if (!enabled()) return
   try {
     const buffer = await load(url)
-    if (enabled()) play(buffer, gainInto(1), getEngine().ctx.currentTime)
+    if (enabled()) play(buffer, gainInto(level), getEngine().ctx.currentTime)
   } catch {
     // A sound that fails to load is skipped.
   }
 }
 
+// Picks a random sound, never the same one twice in a row.
+function randomPicker(urls: readonly [string, ...string[]]) {
+  let last = -1
+  return () => {
+    // Drawing from the others and skipping over the last one keeps every other sound equally likely.
+    let index = Math.floor(Math.random() * (last < 0 ? urls.length : urls.length - 1))
+    if (last >= 0 && index >= last) index++
+    last = index
+    return urls[index] ?? urls[0]
+  }
+}
+
+const nextKey = randomPicker(KEY_URLS)
+let lockVoice: { gain: GainNode; source: AudioBufferSourceNode } | undefined
+
 export const playLevelUp = () => playOnce(levelUpUrl)
 export const playWarp = () => playOnce(warpUrl)
 export const playPopup = (open: boolean) => playOnce(open ? popupOpenUrl : popupCloseUrl)
+export const playToast = () => playOnce(toastUrl, TOAST)
+export const playKey = () => playOnce(nextKey(), KEY)
+
+export async function playLockOn() {
+  if (!enabled()) return
+  try {
+    const buffer = await load(lockOnUrl)
+    if (!enabled()) return
+    if (lockVoice) fadeOut(lockVoice.gain, [lockVoice.source], LOCK_CUT)
+    const gain = gainInto(LOCK_ON)
+    lockVoice = { gain, source: play(buffer, gain, getEngine().ctx.currentTime) }
+  } catch {
+    // A sound that fails to load is skipped.
+  }
+}
 
 export interface Charge {
   fire(): void

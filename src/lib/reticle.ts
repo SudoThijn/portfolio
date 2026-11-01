@@ -1,4 +1,5 @@
 import { finePointer, pointer, reduceMotion } from './env'
+import { playLockOn } from './sound'
 
 // Set by the charge-shot egg: 0 is idle, 1 is fully charged.
 export const reticleState = { charge: 0 }
@@ -16,7 +17,9 @@ export function mountReticle(reticle: HTMLElement): () => void {
   let frame = 0
 
   const onOver = (e: Event) => {
-    lockTarget = (e.target as Element).closest(LOCKABLE)
+    const target = (e.target as Element).closest(LOCKABLE)
+    if (target && target !== lockTarget && !reticleState.charge) void playLockOn()
+    lockTarget = target
     reticle.classList.toggle('is-locked', !!lockTarget)
   }
   const onLeave = () => reticle.classList.remove('is-on')

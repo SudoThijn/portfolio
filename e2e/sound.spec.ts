@@ -25,6 +25,10 @@ const SHOT = 4.7147
 const WARP = 4.117
 const LEVEL_UP = 0.7739
 const POPUP_OPEN = 0.656
+const LOCK_ON = 0.397
+const TOAST = 0.817
+// The four keystroke sounds differ in length, which is how the tests tell them apart.
+const KEYS = [0.407, 0.412, 0.352, 0.397]
 
 const KONAMI = [
   'ArrowUp',
@@ -388,6 +392,103 @@ test.describe('what plays', () => {
   })
 })
 
+const isKey = (v: Voice) => KEYS.some((duration) => Math.abs(v.duration - duration) < 0.001)
+
+async function openTerminal(page: Page) {
+  await page.locator('#open-terminal').click()
+  await expect(page.locator('dialog.term')).toBeVisible()
+  await page.locator('#term-input').click()
+}
+
+test.describe('interface sounds', () => {
+  // The reticle only exists with motion and a fine pointer.
+  test.describe('the reticle locking on', () => {
+    test.use({ reducedMotion: 'no-preference' })
+
+    test('plays when the square snaps onto a target, once per target', async ({ page }) => {
+      await soundOn(page)
+      const links = page.locator('.hud__nav a')
+      await links.nth(0).hover()
+      const lock = await voiceLike(page, LOCK_ON, false)
+      expect(await lock()).toHaveLength(1)
+
+      // Moving over the same target again is not a new lock.
+      const box = await boxOf(links.nth(0))
+      await page.mouse.move(box.x + box.width - 2, box.y + box.height - 2)
+      await pause(300)
+      expect(await lock()).toHaveLength(1)
+    })
+
+    test('cuts the previous lock-on so a sweep does not stack them', async ({ page }) => {
+      await soundOn(page)
+      await page.locator('.hud__nav a').nth(0).hover()
+      const lock = await voiceLike(page, LOCK_ON, false)
+      await page.locator('.hud__nav a').nth(1).hover()
+      await expect.poll(async () => (await lock()).length).toBe(2)
+      await expect.poll(async () => (await lock())[0]?.stopped).toBe(true)
+    })
+
+    test('is silent over plain background', async ({ page }) => {
+      await soundOn(page)
+      await voiceLike(page, HUM, true)
+      const before = (await voices(page)).length
+      const { x, y } = await emptySpot(page)
+      await page.mouse.move(x, y)
+      await pause(400)
+      expect(await voices(page)).toHaveLength(before)
+    })
+  })
+
+  test('finding a secret plays the toast sound', async ({ page }) => {
+    await soundOn(page)
+    await page.evaluate(() => window.hack())
+    await expect(page.locator('.toast')).toBeVisible()
+    await voiceLike(page, TOAST, false)
+  })
+
+  test.describe('the terminal', () => {
+    test('every typed key plays one of the key sounds, never the same one twice in a row', async ({
+      page,
+    }) => {
+      await soundOn(page)
+      await openTerminal(page)
+      await page.keyboard.type('abcdefghijklmnopqrst')
+      await expect.poll(async () => (await voices(page)).filter(isKey).length).toBe(20)
+
+      const played = (await voices(page)).filter(isKey)
+      for (let i = 1; i < played.length; i++) {
+        const difference = (played[i]?.duration ?? 0) - (played[i - 1]?.duration ?? 0)
+        expect(Math.abs(difference)).toBeGreaterThan(0.001)
+      }
+      expect(new Set(played.map((v) => v.duration.toFixed(3))).size).toBe(KEYS.length)
+    })
+
+    test('Backspace clicks, but Enter, arrows, Tab and shortcuts stay quiet', async ({ page }) => {
+      await soundOn(page)
+      await openTerminal(page)
+      await page.keyboard.press('Backspace')
+      await expect.poll(async () => (await voices(page)).filter(isKey).length).toBe(1)
+
+      for (const key of ['Enter', 'ArrowUp', 'ArrowDown', 'Tab', 'Control+a']) {
+        await page.keyboard.press(key)
+      }
+      await pause(400)
+      expect((await voices(page)).filter(isKey)).toHaveLength(1)
+    })
+  })
+
+  test('none of it plays while sound is off', async ({ page }) => {
+    await soundOff(page)
+    await page.goto('/')
+    await page.locator('.hud__nav a').nth(0).hover()
+    await page.evaluate(() => window.hack())
+    await openTerminal(page)
+    await page.keyboard.type('hello')
+    await pause(500)
+    expect(await voices(page)).toEqual([])
+  })
+})
+
 test.describe('sound credits', () => {
   test('lists every sound with its author and licence, and closes with Esc', async ({ page }) => {
     await page.goto('/')
@@ -398,7 +499,10 @@ test.describe('sound credits', () => {
     await expect(dialog).toContainText('Packsmithy (packsmithy.com)')
     await expect(dialog).toContainText('Little Robot Sound Factory')
     await expect(dialog).toContainText('FiveBrosStopMosYT')
-    await expect(dialog.locator('li')).toHaveCount(5)
+    await expect(dialog).toContainText('Circlerun')
+    await expect(dialog).toContainText('HaelDB')
+    await expect(dialog).toContainText('eklee, extracted by qubodup')
+    await expect(dialog.locator('li')).toHaveCount(8)
     await expect(dialog.getByRole('link', { name: 'CC BY 4.0' }).first()).toHaveAttribute(
       'href',
       'https://creativecommons.org/licenses/by/4.0/',

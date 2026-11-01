@@ -11,6 +11,7 @@ import {
   submit,
 } from '@/eggs/terminal'
 import { finePointer } from '@/lib/env'
+import { playKey } from '@/lib/sound'
 
 const dialog = useTemplateRef<HTMLDialogElement>('dialog')
 const input = useTemplateRef<HTMLInputElement>('input')
@@ -37,6 +38,8 @@ function onSubmit() {
 }
 
 function onKeydown(e: KeyboardEvent) {
+  const typing = (e.key.length === 1 && !e.ctrlKey && !e.metaKey) || e.key === 'Backspace'
+  if (typing) void playKey()
   if (e.key === 'ArrowUp') {
     const previous = historyPrevious()
     if (previous === null) return
