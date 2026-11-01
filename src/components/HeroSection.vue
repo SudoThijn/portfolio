@@ -1,10 +1,28 @@
 <script setup lang="ts">
-import { onBeforeUnmount, onMounted, useTemplateRef } from 'vue'
+import { nextTick, onBeforeUnmount, onMounted, useTemplateRef, watch } from 'vue'
 import { overdrive } from '@/eggs/modes'
+import { t } from '@/i18n'
 import { mountEmblemSpin } from '@/lib/emblemSpin'
 import { finePointer, reduceMotion } from '@/lib/env'
 import { scramble } from '@/lib/scramble'
 import TickerBand from './TickerBand.vue'
+
+const statusText = () =>
+  overdrive.value
+    ? t('hero.statusOverdrive') + (finePointer ? t('hero.escToExit') : '')
+    : t('hero.status')
+
+const level = useTemplateRef<HTMLElement>('level')
+const levelText = () => (overdrive.value ? 'LV.99' : 'LV.23')
+
+// The badge text comes from the template, and the scramble only plays over the new text.
+watch(overdrive, async () => {
+  await nextTick()
+  const el = level.value
+  if (!el) return
+  delete el.dataset.text
+  scramble(el, 700)
+})
 
 const name = useTemplateRef<HTMLElement>('name')
 const emblem = useTemplateRef<HTMLElement>('emblem')
@@ -41,27 +59,38 @@ function rescramble() {
     <div class="wrap hero__inner">
       <div class="hero__copy">
         <p class="mono hero__ident" data-intro="1">
-          &gt; Ident confirmed <b>//</b> 52.52°N 5.72°E <b>//</b> Dronten, NL
+          &gt; {{ t('hero.ident') }} <b>//</b> 52.52°N 5.72°E <b>//</b> Dronten, NL
         </p>
         <h1 class="hero__name" id="hero-name" ref="name" @pointerenter="rescramble">
           <span class="hero__line" data-scramble>Thijn</span>
           <span class="hero__line hero__line--outline" data-scramble>Douwma</span>
         </h1>
         <div class="hero__tags" data-intro="2">
-          <span class="block block--yellow"><span>Frontend developer</span></span>
-          <span class="block block--magenta"><span>LV.23</span></span>
-          <span class="hero__kana-inline" aria-hidden="true" data-kana="フロントエンド開発者"></span>
+          <span class="block block--yellow"
+            ><span>{{ t('hero.role') }}</span></span
+          >
+          <span class="block block--magenta"
+            ><span ref="level">{{ levelText() }}</span></span
+          >
+          <span
+            class="hero__kana-inline"
+            aria-hidden="true"
+            data-kana="フロントエンド開発者"
+          ></span>
         </div>
         <p class="hero__lede" data-intro="3">
-          I build interfaces in Vue and React, and I lead the frontend of a password manager browser
-          extension.
+          {{ t('hero.lede') }}
         </p>
         <div class="hero__actions" data-intro="4">
-          <a class="btn btn--primary" href="#contact"><span>Get in touch</span></a>
-          <a class="btn btn--ghost" href="#profile"><span>View profile</span></a>
+          <a class="btn btn--primary" href="#contact"
+            ><span>{{ t('common.contact') }}</span></a
+          >
+          <a class="btn btn--ghost" href="#profile"
+            ><span>{{ t('hero.cta.profile') }}</span></a
+          >
         </div>
         <p class="status mono" data-intro="5">
-          <span class="pulse"></span><span class="status__text">Available from January 2027</span>
+          <span class="pulse"></span><span class="status__text">{{ statusText() }}</span>
         </p>
       </div>
 
@@ -137,13 +166,8 @@ function rescramble() {
     </div>
 
     <div class="ticker" aria-hidden="true">
-      <TickerBand
-        back
-        text="Open source ◆ Browser extensions ◆ Interfaces ◆ Security ◆ Usability ◆&nbsp;"
-      />
-      <TickerBand
-        text="Vue ◆ React ◆ JavaScript ◆ Browser extensions ◆ Open source ◆ AI-assisted ◆&nbsp;"
-      />
+      <TickerBand back :text="t('hero.tickerBack')" />
+      <TickerBand :text="t('hero.tickerFront')" />
     </div>
   </section>
 </template>

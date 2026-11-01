@@ -1,7 +1,8 @@
-import { computed, ref } from 'vue'
-import { dateFormat } from '@/lib/env'
+import { computed, ref, watch } from 'vue'
+import { list, locale, t } from '@/i18n'
+import { formatDate } from '@/lib/env'
 import { enterLeet, isLeet } from './modes'
-import { SECRETS, found, resetSecrets, unlock } from './secrets'
+import { SECRETS, found, resetSecrets, secretField, unlock } from './secrets'
 
 type LineKind = '' | 'in' | 'err' | 'dim'
 interface Line {
@@ -15,7 +16,6 @@ interface Folder {
 }
 interface File {
   dir?: false
-  name?: string
   lines?: string[]
   locked?: boolean
   hint?: string
@@ -23,21 +23,12 @@ interface File {
 
 export const lines = ref<Line[]>([])
 
-const FILES: Record<string, string[]> = {
-  'about.txt': [
-    'Thijn Douwma, 23. Frontend developer from Dronten, NL.',
-    'Vue, React and browser extensions. 8+ years of code, 2.5 of them professional.',
-    'Available from January 2027.',
-  ],
-  'quests.log': [
-    '[ACTIVE]    2024 → Jan 2027',
-    '  Frontend developer @ Conduction B.V.',
-    '[ENDED]     2023 → 2024',
-    '  HBO Software Engineering @ Windesheim',
-    '[COMPLETED] 2020 → 2023',
-    '  MBO 4 Software Development @ ROC van Flevoland',
-  ],
-  'contact.txt': [
+// File names are the same in every language, so commands and Tab completion keep working.
+// Each file is a function so only the one being read gets translated.
+const FILES: Record<string, () => string[]> = {
+  'about.txt': () => list('term.about'),
+  'quests.log': () => list('term.quests'),
+  'contact.txt': () => [
     'email     thijn.douwma@outlook.com',
     'linkedin  linkedin.com/in/thijn-douwma',
     'github    github.com/SudoThijn',
@@ -66,16 +57,16 @@ export const promptText = computed(
   () => `guest@td-os:${cwd.value.length ? `~/${cwd.value.join('/')}` : '~'}$`,
 )
 
-function secretFiles(): File[] {
-  return SECRETS.map((s, i) =>
-    found.has(s.id)
-      ? {
-          name: `${s.title.toLowerCase().replace(/\s+/g, '-')}.txt`,
-          lines: [`◆ ${s.title}`, s.text],
-        }
-      : { name: `classified-${i + 1}.locked`, locked: true, hint: s.hint },
-  )
-}
+type Secret = (typeof SECRETS)[number]
+
+// Listing the folder only needs the names, so a secret is translated when its file is opened.
+const secretFileName = (s: Secret, i: number) =>
+  found.has(s.id) ? `${s.file}.txt` : `classified-${i + 1}.locked`
+
+const secretFile = (s: Secret): File =>
+  found.has(s.id)
+    ? { lines: [`◆ ${secretField(s.id, 'title')}`, secretField(s.id, 'text')] }
+    : { locked: true, hint: secretField(s.id, 'hint') }
 
 function resolvePath(path: string) {
   const parts = path.startsWith('~') ? [] : [...cwd.value]
@@ -90,13 +81,13 @@ function resolvePath(path: string) {
 function lookup(parts: string[]): Folder | File | null {
   if (!parts.length) return { dir: true, entries: [...Object.keys(FILES), 'secrets/'] }
   if (parts[0] === 'secrets') {
-    if (parts.length === 1) {
-      return { dir: true, entries: secretFiles().map((f) => f.name ?? ''), list: true }
-    }
-    return parts.length === 2 ? (secretFiles().find((f) => f.name === parts[1]) ?? null) : null
+    if (parts.length === 1) return { dir: true, entries: SECRETS.map(secretFileName), list: true }
+    const secret =
+      parts.length === 2 ? SECRETS.find((s, i) => secretFileName(s, i) === parts[1]) : undefined
+    return secret ? secretFile(secret) : null
   }
-  const file = parts.length === 1 ? FILES[parts[0] ?? ''] : undefined
-  return file ? { lines: file } : null
+  const name = parts[0] ?? ''
+  return parts.length === 1 && Object.hasOwn(FILES, name) ? { lines: FILES[name]?.() } : null
 }
 
 const isFolder = (node: Folder | File): node is Folder => node.dir === true
@@ -106,65 +97,52 @@ const isFolder = (node: Folder | File): node is Folder => node.dir === true
 type Command = (args: string[]) => string[]
 
 const COMMANDS: Record<string, Command> = {
-  help: () => [
-    'help             list commands',
-    'whoami           who you are',
-    'ls [dir]         list files',
-    'cd <dir>         change folder',
-    'pwd              where you are',
-    'cat <file>       print a file',
-    'secrets          achievements and hints',
-    'secrets reset    forget found secrets',
-    'hire             start the hire sequence',
-    'date             time in Dronten',
-    'clear            clear the screen',
-    'exit             close the terminal',
-  ],
-  whoami: () => ['guest', 'The owner is Thijn Douwma. Try: cat about.txt'],
+  help: () => list('term.help'),
+  whoami: () => list('term.whoami'),
   ls: ([path = '.']) => {
     const node = lookup(resolvePath(path))
-    if (!node) return [`ls: ${path}: no such file or folder`]
+    if (!node) return [t('term.lsMissing', { path })]
     if (!isFolder(node)) return [path]
     return node.list ? node.entries : [node.entries.join('  ')]
   },
   cd: ([path = '~']) => {
-    if (path.startsWith('/')) return [`cd: ${path}: permission denied. Guests stay in ~`]
+    if (path.startsWith('/')) return [t('term.cdRoot', { path })]
     const parts = resolvePath(path)
     const node = lookup(parts)
-    if (!node) return [`cd: ${path}: no such folder`]
-    if (!isFolder(node)) return [`cd: ${path}: not a folder`]
+    if (!node) return [t('term.cdMissing', { path })]
+    if (!isFolder(node)) return [t('term.cdFile', { path })]
     cwd.value = parts
     return []
   },
   pwd: () => [`/home/guest${cwd.value.length ? `/${cwd.value.join('/')}` : ''}`],
   cat: ([path]) => {
-    if (!path) return ['cat: missing file name. Try: ls']
+    if (!path) return [t('term.catNoArg')]
     const node = lookup(resolvePath(path))
-    if (!node) return [`cat: ${path}: no such file`]
-    if (isFolder(node)) return [`cat: ${path}: is a folder. Try: cd ${path}`]
-    if (node.locked) return [`cat: ${path}: permission denied`, `hint: ${node.hint}`]
+    if (!node) return [t('term.catMissing', { path })]
+    if (isFolder(node)) return [t('term.catFolder', { path })]
+    if (node.locked)
+      return [t('term.catLocked', { path }), t('term.catHint', { hint: node.hint ?? '' })]
     return node.lines ?? []
   },
   secrets: ([arg]) => {
     if (arg === 'reset') {
       resetSecrets()
-      return ['Secrets reset. Happy hunting.']
+      return [t('term.secretsReset')]
     }
     return [
-      `${found.size}/${SECRETS.length} found`,
-      ...SECRETS.map((s) => (found.has(s.id) ? `[x] ${s.title}: ${s.text}` : `[ ] ???: ${s.hint}`)),
+      t('term.secretsFound', { found: found.size, total: SECRETS.length }),
+      ...SECRETS.map(({ id }) =>
+        found.has(id)
+          ? `[x] ${secretField(id, 'title')}: ${secretField(id, 'text')}`
+          : `[ ] ???: ${secretField(id, 'hint')}`,
+      ),
     ]
   },
-  hire: () => [
-    'Initiating hire sequence…',
-    '[████████████████████] 100%',
-    'Candidate ready. Send the offer to thijn.douwma@outlook.com',
-    'Available from January 2027.',
-  ],
-  sudo: () => ['guest is not in the sudoers file. This incident will be reported.'],
-  rm: () => ['rm: permission denied. Also, rude.'],
+  hire: () => list('term.hire'),
+  sudo: () => [t('term.sudo')],
+  rm: () => [t('term.rm')],
   1337: () => {
-    if (isLeet()) return ['Already elite.']
+    if (isLeet()) return [t('term.alreadyLeet')]
     setTimeout(() => {
       closeTerminal()
       enterLeet()
@@ -173,10 +151,10 @@ const COMMANDS: Record<string, Command> = {
   },
   save: () => {
     unlock('save')
-    return ["Saving… don't turn off the power", 'Game saved.']
+    return [t('egg.saving'), t('egg.saved')]
   },
-  overdrive: () => ["Cheats don't work from in here. Try the classic one on the page itself."],
-  date: () => [dateFormat.format(new Date())],
+  overdrive: () => [t('term.overdrive')],
+  date: () => [formatDate(new Date())],
   echo: (args) => [args.join(' ')],
   clear: () => {
     lines.value = []
@@ -195,7 +173,7 @@ export function run(line: string) {
   const key = name.toLowerCase()
   const command = Object.hasOwn(COMMANDS, key) ? COMMANDS[key] : undefined
   if (!command) {
-    print(`command not found: ${name}. Type help.`, 'err')
+    print(t('term.notFound', { name }), 'err')
     return
   }
   command(args).forEach((text) => print(text))
@@ -248,12 +226,21 @@ export function complete(value: string) {
   return value
 }
 
+function printBanner() {
+  print(t('term.banner'), 'dim')
+  print(t('term.bannerHelp'), 'dim')
+}
+
+// Printed lines keep the language they were written in, so a language change starts a fresh screen.
+watch(locale, () => {
+  if (!lines.value.length) return
+  lines.value = []
+  printBanner()
+})
+
 export function openTerminal() {
   if (!dialog || dialog.open) return
-  if (!lines.value.length) {
-    print('TD-OS v1.0 · root access granted (not really)', 'dim')
-    print('Type help to list commands. Tab completes.', 'dim')
-  }
+  if (!lines.value.length) printBanner()
   dialog.showModal()
   input?.focus()
   unlock('root')

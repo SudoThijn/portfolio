@@ -10,6 +10,7 @@ import {
   registerTerminal,
   submit,
 } from '@/eggs/terminal'
+import { t } from '@/i18n'
 import { finePointer } from '@/lib/env'
 import { playKey } from '@/lib/sound'
 
@@ -58,11 +59,11 @@ function onKeydown(e: KeyboardEvent) {
 </script>
 
 <template>
-  <dialog class="term" ref="dialog" aria-label="Terminal" @click.self="input?.focus()">
+  <dialog class="term" ref="dialog" :aria-label="t('term.label')" @click.self="input?.focus()">
     <div class="term__bar">
       <span>td-os // terminal</span>
       <button class="term__close" type="button" @click="closeTerminal">
-        {{ finePointer ? 'Esc · close' : 'Close' }}
+        {{ t(finePointer ? 'term.escClose' : 'common.close') }}
       </button>
     </div>
     <div class="term__log" id="term-log" ref="log">

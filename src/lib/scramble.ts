@@ -3,6 +3,12 @@ import { reduceMotion } from './env'
 const GLYPHS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789#%&/<>=+'
 const frames = new WeakMap<HTMLElement, number>()
 
+// Stops a running scramble and shows the target text straight away.
+export function settle(el: HTMLElement) {
+  cancelAnimationFrame(frames.get(el) ?? 0)
+  el.textContent = el.dataset.text ?? el.textContent ?? ''
+}
+
 export function scramble(el: HTMLElement, duration = 900) {
   const target = el.dataset.text ?? el.textContent ?? ''
   el.dataset.text = target

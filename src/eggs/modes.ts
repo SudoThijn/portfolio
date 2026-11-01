@@ -1,7 +1,8 @@
-import { ref } from 'vue'
-import { finePointer, minuteFormat, reduceMotion } from '@/lib/env'
+import { nextTick, ref, watch } from 'vue'
+import { locale } from '@/i18n'
+import { minuteFormat, reduceMotion } from '@/lib/env'
 import { field } from '@/lib/field'
-import { scramble } from '@/lib/scramble'
+import { scramble, settle } from '@/lib/scramble'
 import { overdriveMusic, playWarp } from '@/lib/sound'
 import { unlock } from './secrets'
 
@@ -27,10 +28,6 @@ export const overdrive = ref(false)
 export const cutinRun = ref(0)
 export const cutinPlaying = ref(false)
 
-let levelLabel: HTMLElement | null = null
-let statusLabel: HTMLElement | null = null
-const originals = { level: '', status: '' }
-
 export function feedKonami(key: string) {
   if (key === KONAMI[konamiPos]) konamiPos++
   // A third "up" keeps the sequence alive instead of resetting it.
@@ -46,16 +43,6 @@ export function setOverdrive(on: boolean) {
   root.classList.toggle('overdrive', on)
   field.setMode(on ? 'overdrive' : 'normal')
   overdriveMusic(on)
-  if (statusLabel) {
-    statusLabel.textContent = on
-      ? `Overdrive active${finePointer ? ' · Esc to exit' : ''}`
-      : originals.status
-  }
-  if (levelLabel) {
-    levelLabel.textContent = on ? 'LV.99' : originals.level
-    delete levelLabel.dataset.text
-    scramble(levelLabel, 700)
-  }
 }
 
 function enterOverdrive() {
@@ -77,6 +64,10 @@ function enterOverdrive() {
   setTimeout(() => {
     cutinPlaying.value = false
     unlock('overdrive')
+    if (leetQueued) {
+      leetQueued = false
+      enterLeet()
+    }
   }, 1900)
 }
 
@@ -99,13 +90,18 @@ const LEET_SWEEP_MS = 700
 const toLeet = (text: string) =>
   text.replace(/[aeiotsgbr]/gi, (c) => LEET_MAP[c.toLowerCase()] ?? c)
 
-type TextEntry = [Text, string]
+interface TextEntry {
+  node: Text
+  plain: string
+  leet: string
+}
 
 let nameLines: HTMLElement[] = []
 let leet = false
+let leetQueued = false
 let leetNodes: TextEntry[] = []
 let leetTimer = 0
-// Pending sweep steps, and the values an unfinished exit sweep still has to put back.
+// Pending sweep steps, and the nodes an unfinished exit sweep still has to put back.
 let sweepTimers: number[] = []
 let restoreList: TextEntry[] = []
 
@@ -125,30 +121,53 @@ function textNodes() {
   return nodes
 }
 
+// A node is only rewritten while it still holds the text LEET last gave it.
+// Vue renders reactive text into these same nodes, and whatever it wrote since must stay.
+function rewrite({ node, plain, leet: leeted }: TextEntry, toLeetspeak: boolean) {
+  const [from, to] = toLeetspeak ? [plain, leeted] : [leeted, plain]
+  if (node.nodeValue === from) node.nodeValue = to
+}
+
 // Applies each change with a delay based on its height on screen, so it reads as a scan wave moving down.
-function sweep(entries: TextEntry[]) {
-  for (const [node, value] of entries) {
-    const top = node.parentElement?.getBoundingClientRect().top ?? 0
+function sweep(entries: TextEntry[], toLeetspeak: boolean) {
+  for (const entry of entries) {
+    const top = entry.node.parentElement?.getBoundingClientRect().top ?? 0
     const delay = reduceMotion ? 0 : Math.max(0, Math.min(1, top / innerHeight)) * LEET_SWEEP_MS
-    if (delay === 0) node.nodeValue = value
-    else sweepTimers.push(window.setTimeout(() => (node.nodeValue = value), delay))
+    if (delay === 0) rewrite(entry, toLeetspeak)
+    else sweepTimers.push(window.setTimeout(() => rewrite(entry, toLeetspeak), delay))
   }
 }
 
 function flushSweep() {
   sweepTimers.forEach(clearTimeout)
   sweepTimers = []
-  for (const [node, value] of restoreList) node.nodeValue = value
+  for (const entry of restoreList) rewrite(entry, false)
   restoreList = []
 }
 
 export function enterLeet() {
   if (leet) return
-  if (overdrive.value) setOverdrive(false)
-  flushSweep()
+  // The OVERDRIVE band owns the screen until it is done, so LEET waits for it and then replaces it.
+  if (cutinPlaying.value) {
+    leetQueued = true
+    return
+  }
   leet = true
-  leetNodes = textNodes().map((node): TextEntry => [node, node.nodeValue ?? ''])
-  sweep(leetNodes.map(([node, value]): TextEntry => [node, toLeet(value)]))
+  const wasOverdrive = overdrive.value
+  if (wasOverdrive) setOverdrive(false)
+  // Leaving overdrive changes the status line on Vue's next render, and LEET has to read that text.
+  if (wasOverdrive) void nextTick(beginLeet)
+  else beginLeet()
+}
+
+function beginLeet() {
+  if (!leet) return
+  flushSweep()
+  leetNodes = textNodes().map((node) => {
+    const plain = node.nodeValue ?? ''
+    return { node, plain, leet: toLeet(plain) }
+  })
+  sweep(leetNodes, true)
   nameLines.forEach((el, i) => {
     el.dataset.original ??= el.dataset.text ?? el.textContent ?? ''
     el.dataset.text = toLeet(el.dataset.original)
@@ -165,23 +184,37 @@ export function enterLeet() {
   leetTimer = window.setTimeout(exitLeet, LEET_MS)
 }
 
-export function exitLeet() {
-  if (!leet) return
+// With `immediate` the text is put back at once instead of through the scan wave.
+export function exitLeet({ immediate = false } = {}) {
+  if (!leet) {
+    if (immediate) flushSweep()
+    return
+  }
   leet = false
   clearTimeout(leetTimer)
   sweepTimers.forEach(clearTimeout)
   sweepTimers = []
   restoreList = leetNodes
   leetNodes = []
-  sweep(restoreList)
-  sweepTimers.push(window.setTimeout(flushSweep, LEET_SWEEP_MS + 50))
+  if (immediate) {
+    flushSweep()
+  } else {
+    sweep(restoreList, false)
+    sweepTimers.push(window.setTimeout(flushSweep, LEET_SWEEP_MS + 50))
+  }
   nameLines.forEach((el, i) => {
+    // Without a saved original, LEET ended before it began and there is nothing to put back.
+    if (el.dataset.original === undefined) return
     el.dataset.text = el.dataset.original
-    scramble(el, 500 + i * 150)
+    if (immediate) settle(el)
+    else scramble(el, 500 + i * 150)
   })
   root.classList.remove('leet')
   field.setMode('normal')
 }
+
+// A language change ends LEET on the spot, so no leetspeak is left on text that is about to change.
+watch(locale, () => exitLeet({ immediate: true }), { flush: 'sync' })
 
 let clockClicks: number[] = []
 
@@ -197,10 +230,6 @@ export function clockPressed() {
 /* ---------- Setup ---------- */
 
 export function initModes() {
-  levelLabel = document.querySelector<HTMLElement>('.hero__tags .block--magenta > span')
-  statusLabel = document.querySelector<HTMLElement>('.status__text')
-  originals.level = levelLabel?.textContent ?? ''
-  originals.status = statusLabel?.textContent ?? ''
   nameLines = [...document.querySelectorAll<HTMLElement>('[data-scramble]')]
 
   // On touch screens the code is swipes for the arrows, then two taps for B and A.

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { onMounted, useTemplateRef } from 'vue'
+import { t } from '@/i18n'
 import { CREDITS, creditsOpen } from '@/lib/credits'
 import { playPopup } from '@/lib/sound'
 
@@ -26,23 +27,23 @@ const onClosed = () => {
     @close="onClosed"
   >
     <div class="credits__bar">
-      <h2 class="credits__title" id="credits-title">Sound credits</h2>
-      <button class="credits__close mono" type="button" @click="close">Close</button>
+      <h2 class="credits__title" id="credits-title">{{ t('credits.title') }}</h2>
+      <button class="credits__close mono" type="button" @click="close">
+        {{ t('common.close') }}
+      </button>
     </div>
     <ul class="credits__list">
       <li v-for="credit in CREDITS" :key="credit.work">
         <span>
           <a :href="credit.url" target="_blank" rel="noopener">{{ credit.work }}</a>
-          <template v-if="'by' in credit"> by {{ credit.by }}</template>
+          <template v-if="'by' in credit"> {{ t('credits.by') }} {{ credit.by }}</template>
         </span>
         <span class="credits__meta mono">
-          {{ credit.use }} ·
+          {{ t(credit.use) }} ·
           <a :href="credit.licenceUrl" target="_blank" rel="noopener">{{ credit.licence }}</a>
         </span>
       </li>
     </ul>
-    <p class="credits__note mono">
-      Sounds were converted to OGG, and some were trimmed or changed in volume.
-    </p>
+    <p class="credits__note mono">{{ t('credits.note') }}</p>
   </dialog>
 </template>

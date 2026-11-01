@@ -373,6 +373,38 @@ body::before {
 .hud__bars i:nth-child(3) { animation-delay: -.55s; }
 @keyframes sound-bars { from { transform: scaleY(.25); } to { transform: scaleY(1); } }
 
+.hud__lang {
+  position: relative;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  border: 1px solid var(--line-bright);
+  transform: skewX(var(--skew));
+  isolation: isolate;
+}
+/* The yellow slab slides under whichever language is active. */
+.hud__lang::before {
+  content: "";
+  position: absolute;
+  inset: 0 50% 0 0;
+  z-index: -1;
+  background: var(--yellow);
+  transition: transform .35s var(--ease-out);
+}
+.hud__lang[data-locale="nl"]::before { transform: translateX(100%); }
+.hud__lang button {
+  padding: 7px 13px;
+  border: 0;
+  background: none;
+  color: var(--dim);
+  font: 700 .78rem/1 var(--font-display);
+  letter-spacing: .1em;
+  cursor: pointer;
+  transition: color .25s var(--ease-out);
+}
+.hud__lang button > span { display: inline-block; transform: skewX(var(--unskew)); }
+.hud__lang button:hover { color: var(--text); }
+.hud__lang button[aria-pressed="true"] { color: var(--on-accent); }
+
 .hud__progress {
   position: absolute;
   left: 0;
@@ -1596,6 +1628,7 @@ html.js .ticker { animation: slam .8s var(--ease-out) .9s backwards; }
   .hud__nav a { padding: .55em .6em; font-size: .7rem; letter-spacing: .06em; }
   .hud__logo { width: 44px; height: 30px; font-size: .9rem; }
   .hud__sound { margin-left: 0; }
+  .hud__lang button { padding: 7px 9px; font-size: .7rem; letter-spacing: .06em; }
   .hud__sound-label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 
   .hero { min-height: 0; padding-top: calc(var(--hud-h) + 40px); padding-bottom: 130px; }
@@ -1625,10 +1658,23 @@ html.js .ticker { animation: slam .8s var(--ease-out) .9s backwards; }
 }
 
 @media (max-width: 420px) {
-  .hud__nav a { padding: .55em .45em; font-size: .64rem; }
+  .hud { gap: 8px; padding-left: max(12px, env(safe-area-inset-left, 0px)); padding-right: max(12px, env(safe-area-inset-right, 0px)); }
+  .hud__logo { flex: none; width: 38px; }
+  .hud__nav a { padding: .55em .36em; font-size: .62rem; letter-spacing: .03em; }
+  .hud__sound { padding: 6px 8px; }
+  .hud__lang button { padding: 7px 7px; font-size: .66rem; }
+  .sec-head__title { font-size: clamp(1.9rem, 10vw, 2.6rem); }
   .idcard__top { padding-inline: 20px; }
   .xp, .idcard__facts { padding-inline: 20px; }
   .idcard__strip { padding-inline: 20px; }
   .idcard__facts > div { grid-template-columns: 90px minmax(0, 1fr); }
   .lab__row { flex-direction: column; }
+}
+
+@media (max-width: 350px) {
+  .hud { gap: 6px; padding-left: max(10px, env(safe-area-inset-left, 0px)); padding-right: max(10px, env(safe-area-inset-right, 0px)); }
+  .hud__logo { width: 32px; }
+  .hud__nav a { padding: .55em .28em; font-size: .56rem; letter-spacing: .01em; }
+  .hud__sound { padding: 6px 7px; }
+  .hud__lang button { padding: 7px 5px; font-size: .6rem; letter-spacing: .03em; }
 }

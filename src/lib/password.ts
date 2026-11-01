@@ -1,3 +1,5 @@
+import { formatNumber, t } from '@/i18n'
+
 const SEGMENTS = 12
 const GUESSES_PER_SECOND = 1e10
 const YEAR = 31557600
@@ -39,40 +41,40 @@ function analyse(pw: string) {
 }
 
 export function formatTime(seconds: number) {
-  if (seconds < 1) return 'instantly'
-  const units: [string, number][] = [
+  if (seconds < 1) return t('lab.time.instantly')
+  const units = [
     ['year', YEAR],
     ['day', 86400],
     ['hour', 3600],
     ['minute', 60],
     ['second', 1],
-  ]
+  ] as const
   const years = seconds / YEAR
-  if (years > 1.38e10) return 'after the universe ends'
-  if (years > 1e6) return `in ${Math.round(years / 1e6).toLocaleString('en')} million years`
+  if (years > 1.38e10) return t('lab.time.universe')
+  if (years > 1e6) return t('lab.time.millionYears', { n: formatNumber(Math.round(years / 1e6)) })
   for (const [name, size] of units) {
     if (seconds >= size) {
       const n = Math.round(seconds / size)
-      return `in ${n.toLocaleString('en')} ${name}${n === 1 ? '' : 's'}`
+      return t(`lab.time.${name}.${n === 1 ? 'one' : 'other'}`, { n: formatNumber(n) })
     }
   }
-  return 'instantly'
+  return t('lab.time.instantly')
 }
 
-function rankFor(bits: number): [Rank, string] {
-  if (bits < 40) return ['critical', 'Critical']
-  if (bits < 60) return ['weak', 'Weak']
-  if (bits < 80) return ['decent', 'Decent']
-  if (bits < 110) return ['strong', 'Strong']
-  return ['overkill', 'Overkill']
+function rankFor(bits: number): Rank {
+  if (bits < 40) return 'critical'
+  if (bits < 60) return 'weak'
+  if (bits < 80) return 'decent'
+  if (bits < 110) return 'strong'
+  return 'overkill'
 }
 
 export function inspectPassword(pw: string) {
   const { pool, bits, common } = analyse(pw)
-  const [rank, label] = rankFor(bits)
+  const rank = rankFor(bits)
   return {
     rank,
-    label: common ? 'Leaked' : label,
+    label: t(common ? 'lab.rank.leaked' : `lab.rank.${rank}`),
     time: formatTime(2 ** bits / 2 / GUESSES_PER_SECOND),
     length: pw.length,
     pool,

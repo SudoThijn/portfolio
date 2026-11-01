@@ -2,7 +2,8 @@
 import { bursts, denials, ring } from '@/eggs/charge'
 import { cutinPlaying, cutinRun, overdrive, setOverdrive } from '@/eggs/modes'
 import { saveBox } from '@/eggs/savepoint'
-import { SECRETS, toasts } from '@/eggs/secrets'
+import { SECRETS, secretField, toasts } from '@/eggs/secrets'
+import { t } from '@/i18n'
 import { finePointer } from '@/lib/env'
 
 const SHARDS = 10
@@ -21,9 +22,9 @@ const escHint = finePointer ? ' · Esc' : ''
 <template>
   <div class="toasts" role="status" aria-live="polite">
     <div v-for="toast in toasts" :key="toast.key" class="toast" :class="{ 'is-out': toast.out }">
-      <span class="toast__kicker">◆ Achievement unlocked</span>
-      <span class="toast__title">{{ toast.secret.title }}</span>
-      <span class="toast__text">{{ toast.secret.text }}</span>
+      <span class="toast__kicker">{{ t('egg.toast') }}</span>
+      <span class="toast__title">{{ secretField(toast.id, 'title') }}</span>
+      <span class="toast__text">{{ secretField(toast.id, 'text') }}</span>
       <span class="toast__count">{{ toast.count }}/{{ SECRETS.length }}</span>
     </div>
   </div>
@@ -36,7 +37,7 @@ const escHint = finePointer ? ' · Esc' : ''
       <div class="cutin__content">
         <span class="cutin__kana">オーバードライブ</span>
         <span class="cutin__title">Overdrive</span>
-        <span class="cutin__sub">Limit break // all stats maxed</span>
+        <span class="cutin__sub">{{ t('egg.cutinSub') }}</span>
       </div>
     </div>
   </div>
@@ -47,7 +48,7 @@ const escHint = finePointer ? ' · Esc' : ''
     :hidden="!overdrive"
     @click="setOverdrive(false)"
   >
-    <span>Exit overdrive{{ escHint }}</span>
+    <span>{{ t('egg.exitOverdrive') }}{{ escHint }}</span>
   </button>
 
   <div
@@ -94,10 +95,14 @@ const escHint = finePointer ? ' · Esc' : ''
     <span class="savepoint__crystal" aria-hidden="true"></span>
     <span class="savepoint__body">
       <span class="savepoint__text">
-        <b v-if="saveBox.saved">Game saved.</b>
-        <template v-else>Saving… don't turn off the power</template>
+        <b v-if="saveBox.saved">{{ t('egg.saved') }}</b>
+        <template v-else>{{ t('egg.saving') }}</template>
       </span>
-      <span class="savepoint__meta">{{ saveBox.meta }}</span>
+      <span class="savepoint__meta">{{
+        saveBox.saved
+          ? t('egg.saveMeta', { found: saveBox.found, total: SECRETS.length, time: saveBox.time })
+          : ''
+      }}</span>
     </span>
   </div>
 </template>

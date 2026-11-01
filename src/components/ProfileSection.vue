@@ -1,49 +1,42 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { openTerminal } from '@/eggs/terminal'
+import { label, t, type Label, type MessageKey } from '@/i18n'
 import SectionHead from './SectionHead.vue'
 
 const STAT_SEGMENTS = 10
 
-const stats = [
+interface Stat {
+  name: Label
+  rank: 'experienced' | 'basic'
+  level: number
+  info: MessageKey
+}
+
+const stats: Stat[] = [
+  { name: 'JavaScript', rank: 'experienced', level: 8, info: 'profile.stat.javascript' },
+  { name: 'React', rank: 'experienced', level: 8, info: 'profile.stat.react' },
+  { name: 'Vue', rank: 'experienced', level: 8, info: 'profile.stat.vue' },
   {
-    name: 'JavaScript',
-    rank: 'Experienced',
+    name: { key: 'profile.stat.extensions' },
+    rank: 'experienced',
     level: 8,
-    info: 'Eight-plus years of it, from hobby projects to production code.',
+    info: 'profile.stat.extensionsInfo',
   },
-  { name: 'React', rank: 'Experienced', level: 8, info: 'Production interfaces at Conduction.' },
-  {
-    name: 'Vue',
-    rank: 'Experienced',
-    level: 8,
-    info: 'Production interfaces at Conduction, day to day.',
-  },
-  {
-    name: 'Browser extensions',
-    rank: 'Experienced',
-    level: 8,
-    info: 'Lead frontend developer on a password manager extension.',
-  },
-  {
-    name: 'PHP / backend',
-    rank: 'Basic',
-    level: 3,
-    info: 'The basics from MBO: PHP and databases.',
-  },
+  { name: 'PHP / backend', rank: 'basic', level: 3, info: 'profile.stat.php' },
 ]
 const perks = [
-  'Fast learner',
-  'Takes initiative',
-  'Team player',
-  'AI-assisted workflow',
-  'Open source',
-]
+  'profile.perk.learner',
+  'profile.perk.initiative',
+  'profile.perk.team',
+  'profile.perk.ai',
+  'profile.perk.openSource',
+] as const
 
 const active = ref(-1)
 const info = computed(() => {
   const stat = stats[active.value]
-  return stat ? `${stat.name}: ${stat.info}` : 'Hover or focus a stat to inspect it.'
+  return stat ? `${label(stat.name)}: ${t(stat.info)}` : t('profile.statsHint')
 })
 </script>
 
@@ -51,8 +44,8 @@ const info = computed(() => {
   <section class="section" id="profile" aria-labelledby="profile-title">
     <div class="wrap">
       <SectionHead
-        tag="Sec.Profile"
-        title="Character profile"
+        :tag="t('profile.tag')"
+        :title="t('profile.title')"
         kana="プロフィール"
         title-id="profile-title"
       />
@@ -60,7 +53,7 @@ const info = computed(() => {
       <div class="sheet">
         <aside class="card idcard" data-reveal>
           <div class="idcard__strip mono">
-            <span>Player card</span
+            <span>{{ t('profile.card') }}</span
             ><button class="idcard__id" type="button" id="open-terminal" @click="openTerminal">
               ID//SudoThijn
             </button>
@@ -72,68 +65,64 @@ const info = computed(() => {
             </div>
             <div class="idcard__who">
               <p class="idcard__name">Thijn Douwma</p>
-              <p class="idcard__class">Frontend developer</p>
+              <p class="idcard__class">{{ t('hero.role') }}</p>
               <p class="idcard__kana" aria-hidden="true" data-kana="フロントエンド開発者"></p>
             </div>
           </div>
 
           <div class="xp">
-            <div class="xp__head mono"><span>Coding XP</span><span>8 yrs</span></div>
-            <div
-              class="xp__bar"
-              role="img"
-              aria-label="8 years of coding, 2.5 of them professional"
-            >
+            <div class="xp__head mono">
+              <span>{{ t('profile.xp') }}</span
+              ><span>{{ t('profile.xpYears') }}</span>
+            </div>
+            <div class="xp__bar" role="img" :aria-label="t('profile.xpLabel')">
               <span class="xp__fill"></span>
             </div>
             <ul class="xp__legend mono">
-              <li><i class="sw sw--cyan"></i>Hobby &amp; school 5.5</li>
-              <li><i class="sw sw--magenta"></i>Professional 2.5</li>
+              <li><i class="sw sw--cyan"></i>{{ t('profile.xpHobby') }}</li>
+              <li><i class="sw sw--magenta"></i>{{ t('profile.xpPro') }}</li>
             </ul>
           </div>
 
           <dl class="idcard__facts">
             <div>
-              <dt class="mono">Origin</dt>
+              <dt class="mono">{{ t('profile.origin') }}</dt>
               <dd>Dronten, NL</dd>
             </div>
             <div>
-              <dt class="mono">Guild</dt>
+              <dt class="mono">{{ t('profile.guild') }}</dt>
               <dd>Conduction B.V.</dd>
             </div>
             <div>
-              <dt class="mono">Languages</dt>
-              <dd>Dutch (native), English (fluent)</dd>
+              <dt class="mono">{{ t('profile.languages') }}</dt>
+              <dd>{{ t('profile.languagesValue') }}</dd>
             </div>
             <div>
-              <dt class="mono">Status</dt>
-              <dd class="hl">Free agent from Jan 2027</dd>
+              <dt class="mono">{{ t('profile.status') }}</dt>
+              <dd class="hl">{{ t('profile.statusValue') }}</dd>
             </div>
           </dl>
         </aside>
 
         <div class="sheet__main">
           <p class="bio" data-reveal>
-            Frontend developer with more than eight years of programming behind me, two and a half
-            of them professional. Coding isn't just my job; I've been building things since I was a
-            kid and I share my work as open source. I learn fast, take initiative, like working in a
-            team, and use AI tools deliberately to ship faster and better.
+            {{ t('profile.bio') }}
           </p>
 
           <div class="panel-block" data-reveal>
-            <h3 class="mini mono">Stats</h3>
+            <h3 class="mini mono">{{ t('profile.stats') }}</h3>
             <ul class="stats" id="stats">
               <li
                 v-for="(stat, i) in stats"
-                :key="stat.name"
+                :key="stat.info"
                 class="stat"
                 :class="{ 'is-active': active === i }"
                 tabindex="0"
                 @pointerenter="active = i"
                 @focus="active = i"
               >
-                <span class="stat__name">{{ stat.name }}</span
-                ><span class="stat__rank mono">{{ stat.rank }}</span
+                <span class="stat__name">{{ label(stat.name) }}</span
+                ><span class="stat__rank mono">{{ t(`profile.rank.${stat.rank}`) }}</span
                 ><span class="segs"
                   ><i
                     v-for="n in STAT_SEGMENTS"
@@ -150,10 +139,10 @@ const info = computed(() => {
           </div>
 
           <div class="panel-block" data-reveal>
-            <h3 class="mini mono">Perks</h3>
+            <h3 class="mini mono">{{ t('profile.perks') }}</h3>
             <ul class="perks">
               <li v-for="perk in perks" :key="perk" class="block block--chip">
-                <span>{{ perk }}</span>
+                <span>{{ t(perk) }}</span>
               </li>
             </ul>
           </div>

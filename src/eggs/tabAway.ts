@@ -1,3 +1,4 @@
+import { t } from '@/i18n'
 import { reduceMotion } from '@/lib/env'
 import { unlock } from './secrets'
 
@@ -21,7 +22,7 @@ export function initTabAway() {
       let flip = false
       const blink = () => {
         flip = !flip
-        document.title = flip ? '⚠ Signal lost…' : 'Come back?'
+        document.title = t(flip ? 'egg.signalLost' : 'egg.comeBack')
       }
       blink()
       awayTimer = window.setInterval(blink, 1000)

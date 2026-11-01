@@ -1,17 +1,18 @@
 <script setup lang="ts">
 import { ref, useTemplateRef } from 'vue'
+import { t } from '@/i18n'
 import SectionHead from './SectionHead.vue'
 
 const EMAIL = 'thijn.douwma@outlook.com'
 
 const emailLink = useTemplateRef<HTMLElement>('emailLink')
-const label = ref('Copy')
+const copyState = ref<'copy' | 'copied' | 'selected'>('copy')
 const done = ref(false)
 
 async function copyEmail() {
   try {
     await navigator.clipboard.writeText(EMAIL)
-    label.value = 'Copied'
+    copyState.value = 'copied'
   } catch {
     // Clipboard access can be blocked, so select the address for a manual copy instead.
     const range = document.createRange()
@@ -19,11 +20,11 @@ async function copyEmail() {
     const selection = getSelection()
     selection?.removeAllRanges()
     selection?.addRange(range)
-    label.value = 'Selected'
+    copyState.value = 'selected'
   }
   done.value = true
   setTimeout(() => {
-    label.value = 'Copy'
+    copyState.value = 'copy'
     done.value = false
   }, 1800)
 }
@@ -32,15 +33,20 @@ async function copyEmail() {
 <template>
   <section class="section contact" id="contact" aria-labelledby="contact-title">
     <div class="wrap">
-      <SectionHead tag="Sec.Comms" title="Contact" kana="コンタクト" title-id="contact-title" />
+      <SectionHead
+        :tag="t('contact.tag')"
+        :title="t('contact.title')"
+        kana="コンタクト"
+        title-id="contact-title"
+      />
 
       <p class="contact__big" data-reveal>
-        Hiring a frontend developer for 2027? <span>Let's talk.</span>
+        {{ t('contact.big') }} <span>{{ t('contact.bigAccent') }}</span>
       </p>
 
       <div class="channels">
         <div class="channel" data-reveal>
-          <span class="channel__kind mono">Email</span>
+          <span class="channel__kind mono">{{ t('contact.email') }}</span>
           <a class="channel__value" ref="emailLink" :href="`mailto:${EMAIL}`">{{ EMAIL }}</a>
           <button
             class="btn btn--small"
@@ -49,7 +55,7 @@ async function copyEmail() {
             id="copy-email"
             @click="copyEmail"
           >
-            <span>{{ label }}</span>
+            <span>{{ t(`contact.${copyState}`) }}</span>
           </button>
         </div>
         <div class="channel" data-reveal>
@@ -66,7 +72,7 @@ async function copyEmail() {
             href="https://www.linkedin.com/in/thijn-douwma/"
             target="_blank"
             rel="noopener"
-            ><span>Open</span></a
+            ><span>{{ t('contact.open') }}</span></a
           >
         </div>
         <div class="channel" data-reveal>
@@ -83,7 +89,7 @@ async function copyEmail() {
             href="https://github.com/SudoThijn"
             target="_blank"
             rel="noopener"
-            ><span>Open</span></a
+            ><span>{{ t('contact.open') }}</span></a
           >
         </div>
       </div>

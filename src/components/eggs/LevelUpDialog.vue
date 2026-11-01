@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { onMounted, useTemplateRef } from 'vue'
 import { SECRETS, levelUpOpen } from '@/eggs/secrets'
+import { t } from '@/i18n'
 import { playLevelUp } from '@/lib/sound'
 
 const dialog = useTemplateRef<HTMLDialogElement>('dialog')
@@ -26,14 +27,16 @@ const onClosed = () => {
   >
     <div class="levelup__lines" aria-hidden="true"></div>
     <div class="levelup__card">
-      <p class="levelup__kicker">◆ All secrets found {{ SECRETS.length }}/{{ SECRETS.length }}</p>
-      <h2 class="levelup__title" id="levelup-title">Level up!</h2>
-      <p class="levelup__text">
-        You kept digging until you found everything hidden here. That's how I work too.
-      </p>
+      <p class="levelup__kicker">{{ t('egg.levelUpKicker', { total: SECRETS.length }) }}</p>
+      <h2 class="levelup__title" id="levelup-title">{{ t('egg.levelUpTitle') }}</h2>
+      <p class="levelup__text">{{ t('egg.levelUpText') }}</p>
       <div class="levelup__actions">
-        <a class="btn btn--primary" href="#contact" @click="close"><span>Get in touch</span></a>
-        <button class="btn btn--ghost" type="button" @click="close"><span>Close</span></button>
+        <a class="btn btn--primary" href="#contact" @click="close"
+          ><span>{{ t('common.contact') }}</span></a
+        >
+        <button class="btn btn--ghost" type="button" @click="close">
+          <span>{{ t('common.close') }}</span>
+        </button>
       </div>
     </div>
   </dialog>

@@ -1,3 +1,5 @@
+import { LOCALES, locale, type Locale } from '@/i18n'
+
 export const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches
 export const finePointer = matchMedia('(hover: hover) and (pointer: fine)').matches
 
@@ -30,8 +32,14 @@ export const minuteFormat = new Intl.DateTimeFormat('en-GB', {
   hour: '2-digit',
   minute: '2-digit',
 })
-export const dateFormat = new Intl.DateTimeFormat('en-GB', {
+const DATE_OPTIONS: Intl.DateTimeFormatOptions = {
   timeZone,
   dateStyle: 'full',
   timeStyle: 'medium',
-})
+}
+const DATE_LANGUAGES: Record<Locale, string> = { en: 'en-GB', nl: 'nl-NL' }
+const dateFormats = Object.fromEntries(
+  LOCALES.map((code) => [code, new Intl.DateTimeFormat(DATE_LANGUAGES[code], DATE_OPTIONS)]),
+) as Record<Locale, Intl.DateTimeFormat>
+
+export const formatDate = (date: Date) => dateFormats[locale.value].format(date)

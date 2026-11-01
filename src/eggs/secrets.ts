@@ -1,56 +1,27 @@
 import { computed, reactive, ref } from 'vue'
+import { t } from '@/i18n'
 import { playToast } from '@/lib/sound'
 
+// The texts live in the language files. `file` is the stable terminal file name in every language.
 export const SECRETS = [
-  {
-    id: 'overdrive',
-    title: 'Limit break',
-    text: 'Entered the Konami code',
-    hint: 'An old cheat code still works here. ↑ ↑ ↓ ↓ …',
-  },
-  {
-    id: 'root',
-    title: 'Root access',
-    text: 'Opened the hidden terminal',
-    hint: 'You are looking at it.',
-  },
-  {
-    id: 'charge',
-    title: 'Full charge',
-    text: 'Fired a charged shot',
-    hint: 'Hold your fire on an empty spot, then let go.',
-  },
-  {
-    id: 'console',
-    title: 'Source diver',
-    text: 'Ran a command from the dev console',
-    hint: 'Some messages only show up for developers.',
-  },
-  {
-    id: 'leet',
-    title: 'Elite',
-    text: 'Went 1337 for 13.37 seconds',
-    hint: 'Some minutes are more elite than others. Impatient? Poke the clock five times, or type 1337 in here.',
-  },
-  {
-    id: 'save',
-    title: 'Save point',
-    text: 'Saved the game',
-    hint: 'Old habits: save often. Ctrl+S, or type save in here.',
-  },
-  {
-    id: 'signal',
-    title: 'Signal restored',
-    text: 'Wandered off and came back',
-    hint: 'Visit another tab for a moment, then come back.',
-  },
+  { id: 'overdrive', file: 'limit-break' },
+  { id: 'root', file: 'root-access' },
+  { id: 'charge', file: 'full-charge' },
+  { id: 'console', file: 'source-diver' },
+  { id: 'leet', file: 'elite' },
+  { id: 'save', file: 'save-point' },
+  { id: 'signal', file: 'signal-restored' },
 ] as const
 
 export type SecretId = (typeof SECRETS)[number]['id']
 
+// One field at a time, so only the text that is shown gets translated.
+export const secretField = (id: SecretId, field: 'title' | 'text' | 'hint') =>
+  t(`secret.${id}.${field}`)
+
 interface Toast {
   key: number
-  secret: (typeof SECRETS)[number]
+  id: SecretId
   count: number
   out: boolean
 }
@@ -82,8 +53,8 @@ export const foundCount = computed(() => found.size)
 
 let toastKey = 0
 
-function showToast(secret: (typeof SECRETS)[number]) {
-  const toast = reactive<Toast>({ key: toastKey++, secret, count: found.size, out: false })
+function showToast(id: SecretId) {
+  const toast = reactive<Toast>({ key: toastKey++, id, count: found.size, out: false })
   toasts.value.push(toast)
   void playToast()
   setTimeout(() => {
@@ -98,8 +69,7 @@ export function unlock(id: SecretId) {
   if (found.has(id)) return
   found.add(id)
   writeStore()
-  const secret = SECRETS.find((s) => s.id === id)
-  if (secret) showToast(secret)
+  showToast(id)
   if (found.size === SECRETS.length) setTimeout(() => (levelUpOpen.value = true), 1400)
 }
 

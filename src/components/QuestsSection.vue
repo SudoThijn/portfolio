@@ -1,47 +1,49 @@
 <script setup lang="ts">
+import { label, list, t, type Label, type MessageKey } from '@/i18n'
 import SectionHead from './SectionHead.vue'
 
-const quests = [
+// The titles and places are names, shown as they are, apart from the one place that has a Dutch name.
+interface Quest {
+  active: boolean
+  tone: string
+  kind: MessageKey
+  when: MessageKey
+  state: MessageKey
+  title: string
+  where: Label
+  objectives: MessageKey
+}
+
+const quests: Quest[] = [
   {
     active: true,
     tone: 'yellow',
-    kind: 'Main quest',
-    when: '2024 → Jan 2027 · 2.5 yrs',
-    state: 'Active',
+    kind: 'quests.kind.main',
+    when: 'quests.work.when',
+    state: 'quests.state.active',
     title: 'Frontend developer',
     where: 'Conduction B.V.',
-    objectives: [
-      'Built user interfaces with Vue and React as an experienced developer in the team.',
-      'Lead the frontend of a password manager browser extension, where security and usability meet.',
-      'Learned to use AI tools effectively in day-to-day development.',
-    ],
+    objectives: 'quests.work.objectives',
   },
   {
     active: false,
     tone: 'magenta',
-    kind: 'Side quest',
-    when: '2023 → 2024 · 1 yr',
-    state: 'Ended',
+    kind: 'quests.kind.side',
+    when: 'quests.hbo.when',
+    state: 'quests.state.ended',
     title: 'HBO Software Engineering',
-    where: 'Windesheim University of Applied Sciences, Almere',
-    objectives: [
-      'Found out that I do my best work by building, not by studying theory.',
-      'Learned what makes me happy at work, and went to do it.',
-    ],
+    where: { key: 'quests.hbo.where' },
+    objectives: 'quests.hbo.objectives',
   },
   {
     active: false,
     tone: 'cyan',
-    kind: 'Origin story',
-    when: '2020 → 2023 · 3 yrs',
-    state: 'Completed',
+    kind: 'quests.kind.origin',
+    when: 'quests.mbo.when',
+    state: 'quests.state.completed',
     title: 'MBO 4 Software Development',
     where: 'ROC van Flevoland',
-    objectives: [
-      'Built and tested software, and experimented with design and layout in HTML and CSS.',
-      'Worked across frontend and backend, including PHP and databases.',
-      'Worked in project teams using agile methods.',
-    ],
+    objectives: 'quests.mbo.objectives',
   },
 ]
 </script>
@@ -50,8 +52,8 @@ const quests = [
   <section class="section" id="quests" aria-labelledby="quests-title">
     <div class="wrap">
       <SectionHead
-        tag="Sec.Quest_log"
-        title="Quest log"
+        :tag="t('quests.tag')"
+        :title="t('quests.title')"
         kana="クエストログ"
         title-id="quests-title"
       />
@@ -59,7 +61,7 @@ const quests = [
       <ol class="quests">
         <li
           v-for="quest in quests"
-          :key="quest.title"
+          :key="quest.tone"
           class="quest"
           :class="{ 'quest--active': quest.active }"
           data-reveal
@@ -67,17 +69,17 @@ const quests = [
           <div class="quest__card">
             <div class="quest__meta">
               <span class="block block--sm" :class="`block--${quest.tone}`"
-                ><span>{{ quest.kind }}</span></span
+                ><span>{{ t(quest.kind) }}</span></span
               >
-              <span class="mono quest__when">{{ quest.when }}</span>
+              <span class="mono quest__when">{{ t(quest.when) }}</span>
               <span class="mono quest__state"
-                ><span v-if="quest.active" class="pulse"></span>{{ quest.state }}</span
+                ><span v-if="quest.active" class="pulse"></span>{{ t(quest.state) }}</span
               >
             </div>
             <h3 class="quest__title">{{ quest.title }}</h3>
-            <p class="quest__where">{{ quest.where }}</p>
+            <p class="quest__where">{{ label(quest.where) }}</p>
             <ul class="objectives">
-              <li v-for="objective in quest.objectives" :key="objective">{{ objective }}</li>
+              <li v-for="objective in list(quest.objectives)" :key="objective">{{ objective }}</li>
             </ul>
           </div>
         </li>

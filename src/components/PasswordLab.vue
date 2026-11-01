@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
+import { t } from '@/i18n'
 import { reduceMotion } from '@/lib/env'
 import { CHARSET, METER_SEGMENTS, inspectPassword, randomPassword } from '@/lib/password'
 
@@ -36,9 +37,10 @@ function generate() {
 <template>
   <div class="lab" id="lab" :data-rank="result.rank">
     <div class="lab__head mono">
-      <span>Password lab</span><span aria-hidden="true">パスワード</span>
+      <span>{{ t('lab.title') }}</span
+      ><span aria-hidden="true">パスワード</span>
     </div>
-    <label class="lab__label mono" for="pw">Test a password. It never leaves this page.</label>
+    <label class="lab__label mono" for="pw">{{ t('lab.label') }}</label>
     <div class="lab__row">
       <input
         class="lab__input"
@@ -51,7 +53,7 @@ function generate() {
         @input="onInput"
       />
       <button class="btn btn--small" id="pw-gen" type="button" @click="generate">
-        <span>Generate</span>
+        <span>{{ t('lab.generate') }}</span>
       </button>
     </div>
     <div class="meter" id="meter" aria-hidden="true">
@@ -67,25 +69,25 @@ function generate() {
         ><span>{{ result.label }}</span></span
       >
       <span class="mono lab__crack"
-        >Cracked <b id="pw-time">{{ result.time }}</b></span
+        >{{ t('lab.cracked') }} <b id="pw-time">{{ result.time }}</b></span
       >
     </div>
     <dl class="lab__stats mono">
       <div>
-        <dt>Length</dt>
+        <dt>{{ t('lab.length') }}</dt>
         <dd id="pw-len">{{ result.length }}</dd>
       </div>
       <div>
-        <dt>Char pool</dt>
+        <dt>{{ t('lab.pool') }}</dt>
         <dd id="pw-pool">{{ result.pool }}</dd>
       </div>
       <div>
-        <dt>Entropy</dt>
-        <dd id="pw-bits">{{ result.bits }} bits</dd>
+        <dt>{{ t('lab.entropy') }}</dt>
+        <dd id="pw-bits">{{ t('lab.bits', { n: result.bits }) }}</dd>
       </div>
       <div>
-        <dt>Attack</dt>
-        <dd>10B guesses/s</dd>
+        <dt>{{ t('lab.attack') }}</dt>
+        <dd>{{ t('lab.attackValue') }}</dd>
       </div>
     </dl>
   </div>
