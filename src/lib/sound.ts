@@ -337,7 +337,17 @@ function waitForGesture() {
 export function initSound() {
   if (soundOn.value) {
     waitForGesture()
-    startIfAutoplayAllowed()
+    if (document.hidden) {
+      // A tab opened in the background has no visibility change to wait for, and it must stay quiet.
+      const onShown = () => {
+        if (document.hidden) return
+        document.removeEventListener('visibilitychange', onShown)
+        startIfAutoplayAllowed()
+      }
+      document.addEventListener('visibilitychange', onShown)
+    } else {
+      startIfAutoplayAllowed()
+    }
   }
   document.addEventListener('visibilitychange', () => {
     if (!engine) return

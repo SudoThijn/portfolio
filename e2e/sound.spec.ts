@@ -195,6 +195,25 @@ test.describe('switching sound on and off', () => {
     await voiceLike(page, HUM, true)
   })
 
+  test('stays silent in a tab opened in the background until it is shown', async ({ page }) => {
+    await page.addInitScript(() => {
+      window.__allowAutoplay = true
+      Object.defineProperty(document, 'hidden', { get: () => true, configurable: true })
+    })
+    await page.goto('/')
+    await expect(toggle(page)).toContainText('Sound: on')
+    await pause(800)
+    await expect(toggle(page)).toHaveAttribute('data-playing', 'false')
+    expect(await voices(page)).toEqual([])
+
+    await page.evaluate(() => {
+      delete (document as { hidden?: boolean }).hidden
+      document.dispatchEvent(new Event('visibilitychange'))
+    })
+    await expect(toggle(page)).toHaveAttribute('data-playing', 'true')
+    await voiceLike(page, HUM, true)
+  })
+
   test('starts on a mouse press, without waiting for the click to finish', async ({ page }) => {
     await page.goto('/')
     await expect(toggle(page)).toHaveAttribute('data-playing', 'false')
