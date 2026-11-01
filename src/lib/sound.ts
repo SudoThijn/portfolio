@@ -200,11 +200,14 @@ export function overdriveMusic(on: boolean) {
   void syncMusic()
 }
 
+// The engine is suspended while the tab is hidden, so a sound started then would only play on return.
+const audible = () => enabled() && !document.hidden
+
 async function playOnce(url: string, level = 1) {
-  if (!enabled()) return
+  if (!audible()) return
   try {
     const buffer = await load(url)
-    if (enabled()) play(buffer, gainInto(level), getEngine().ctx.currentTime)
+    if (audible()) play(buffer, gainInto(level), getEngine().ctx.currentTime)
   } catch {
     // A sound that fails to load is skipped.
   }

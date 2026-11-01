@@ -232,7 +232,8 @@ export function initModes() {
   let leetMinuteFired = false
   setInterval(() => {
     const isLeetMinute = minuteFormat.format(new Date()) === '13:37'
-    if (isLeetMinute && !leetMinuteFired) enterLeet()
+    // A hidden tab has throttled timers and a suspended audio engine, so LEET would only surface later.
+    if (isLeetMinute && !leetMinuteFired && !document.hidden) enterLeet()
     leetMinuteFired = isLeetMinute
   }, 1000)
 }
