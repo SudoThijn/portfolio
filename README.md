@@ -33,7 +33,7 @@ It is built as a Vue 3 and TypeScript app with a single runtime dependency, and 
 You need Node `^22.18` or `>=24.12`.
 
 ```sh
-npm install
+npm ci
 npm run dev
 ```
 
